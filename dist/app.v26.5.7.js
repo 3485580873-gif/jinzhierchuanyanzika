@@ -869,7 +869,7 @@ maxAttachCount: 1
 },
 moments: [],
 momentsCover: '',
-momentsCoverFit: 'contain',
+momentsCoverFit: 'cover',
 momentsCoverPosY: 50,
 momentsAvatar: '',
 momentsName: '',
@@ -9595,8 +9595,20 @@ avs.className = 'cl-avs';
 const av = (src, name) => {
 const i = document.createElement('i');
 i.className = 'cl-av';
-if (src) { const img = document.createElement('img'); img.src = src; img.alt = ''; img.onerror = function () { try { const ph = (window.__IMG_PH__ || ''); if (ph && this.getAttribute('src') !== ph && !this.hasAttribute('data-oss-ref')) this.setAttribute('src', ph); } catch (e) {} }; i.appendChild(img); }
-else i.textContent = String(name || '我').trim().slice(0, 1) || '我';
+const ch = String(name || '我').trim().slice(0, 1) || '我';
+const tx = document.createElement('span');
+tx.className = 'av-tx';
+tx.textContent = ch;
+i.appendChild(tx);
+if (src) {
+  const img = document.createElement('img');
+  img.src = src; img.alt = '';
+  img.setAttribute('loading', 'lazy');
+  img.setAttribute('decoding', 'async');
+  /* 图挂了就移除，露出底下的首字，而不是空白 */
+  img.onerror = function () { try { this.remove(); } catch (e2) {} };
+  i.appendChild(img);
+}
 return i;
 };
 const meName = (typeof chatMyName === 'function' ? chatMyName(cid) : '') || '我';

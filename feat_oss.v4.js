@@ -825,8 +825,11 @@ async function ossBackupNow(silent) {
   const pad = function (n) { return (n < 10 ? '0' : '') + n; };
   const name = 'zika-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate())
     + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '.json';
+  const upBytes = blob ? blob.size : 0;
   const key = await ossUploadBackupBlob(blob, name);
   blob = null;
+  /* 手动备份成功后：若这份已小于安全阈值，说明数据已瘦身，自动备份恢复 */
+  try { if (upBytes && upBytes < OSS_AUTO_SAFE_BYTES) _ossAutoTooBig = false; } catch (e) {}
   try { localStorage.setItem('ossAutoBackupAt', String(Date.now())); } catch (e) {}
   try { ossRenderBackupList(); } catch (e) {}
   if (!silent) { try { showToast('已备份到云端：' + name, 4500); } catch (e) {} }
@@ -853,6 +856,9 @@ let _ossAutoTimer = null, _ossAutoBusy = false, _ossAutoLastAt = 0;
 const OSS_AUTO_MIN_GAP = 60000;   /* 两次自动上传之间至少隔 60 秒，别把流量烧光 */
 const OSS_AUTO_DEBOUNCE = 10000;  /* 停下来 10 秒没再改，就传 */
 const OSS_AUTO_MAX_BYTES = 15 * 1024 * 1024;  /* 超过 15MB 不自动传（太大了，先迁移图片） */
+const OSS_AUTO_SAFE_BYTES = 4 * 1024 * 1024;  /* 超过此体积不再在主线程自动序列化，避免卡顿/发烫 */
+let _ossAutoTooBig = false;     /* 上一次自动备份发现数据过大 → 暂停自动备份，改由手动/迁移后恢复 */
+let _ossAutoTooBigWarned = false;
 function _ossAutoOn() {
   try { return localStorage.getItem('ossAutoBackup') !== 'off'; } catch (e) { return true; }
 }
@@ -860,6 +866,8 @@ function _ossAutoKick(force) {
   if (!ossReady() || !_ossAutoOn()) return;
   /* ★ 恢复期间一律不上传：半状态数据传上去比不传更糟 */
   if (_ossRestoreLock) return;
+  /* 数据过大：活跃使用期间不排自动备份，避免每次改动都在主线程序列化十几 MB 导致卡顿、手机发烫 */
+  if (_ossAutoTooBig) return;
   try { clearTimeout(_ossAutoTimer); } catch (e) {}
   const gap = Date.now() - _ossAutoLastAt;
   if (force) {
@@ -873,7 +881,7 @@ function _ossAutoKick(force) {
   _ossAutoTimer = setTimeout(function () { _ossAutoRun(); }, wait);
 }
 async function _ossAutoRun() {
-  if (_ossAutoBusy || _ossRestoreLock || !ossReady() || !_ossAutoOn()) return;
+  if (_ossAutoBusy || _ossRestoreLock || !ossReady() || !_ossAutoOn() || _ossAutoTooBig) return;
   /* ★★ 最要紧的一道闸：本地实质为空时**绝不上传**。
      应用启动时本来就会走一次 save()，不加这道闸，
      启动那一刻会把一份空数据传上去，把云端那份好数据盖掉。 */
@@ -887,6 +895,15 @@ async function _ossAutoRun() {
       payload = null; blob = null;
       return;
     }
+    if (blob.size >= OSS_AUTO_SAFE_BYTES) {
+      /* 体积过大：在主线程 JSON.stringify 十几 MB 会冻结界面好几秒
+         （打字/切界面卡顿、手机发烫）。暂停自动备份，等把图片迁到云端图库、
+         数据变小后自动恢复。手动「备份数据到云端」仍可传。 */
+      _ossAutoTooBig = true;
+      _ossAutoMaybeWarnTooBig();
+      payload = null; blob = null;
+      return;
+    }
     await ossUploadBackupBlob(blob, 'auto/zika-latest.json');
     payload = null; blob = null;
     _ossAutoLastAt = Date.now();
@@ -894,6 +911,11 @@ async function _ossAutoRun() {
   } catch (e) {
     console.warn('[oss] 自动备份没成功：', e);
   } finally { _ossAutoBusy = false; }
+}
+function _ossAutoMaybeWarnTooBig() {
+  if (_ossAutoTooBigWarned) return;
+  _ossAutoTooBigWarned = true;
+  try { showToast('数据过大，已暂停自动备份以防卡顿：去 设置 → 数据 → 云端图库 把图片迁到云端，或在 设置 → 云端图库 点「备份数据到云端」手动备份', 6000); } catch (e) {}
 }
 
 /* 定时存档：每隔 5 分钟自动往云端存一份。

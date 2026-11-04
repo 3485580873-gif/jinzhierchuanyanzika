@@ -4649,7 +4649,7 @@ box.innerHTML = '<div class="pl-ask-hd"><span>想和你一起听</span><i>Player
 }
 function _plAvStackHTML(mine, mineName, other, otherName, ghost) {
 const one = (src, nm) => '<i class="pl-av">' +
-(src ? '<img src="' + escapeHTML(src) + '" alt="" onerror="this.remove()">' : escapeHTML(String(nm || '我').trim().slice(0, 1) || '我')) + '</i>';
+(src ? '<span class="av-tx">' + escapeHTML(String(nm || '我').trim().slice(0, 1) || '我') + '</span><img src="' + escapeHTML(src) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : escapeHTML(String(nm || '我').trim().slice(0, 1) || '我')) + '</i>';
 return '<span class="pl-avs">' +
 ((other || otherName) ? one(other, otherName) : (ghost ? '<i class="pl-av gh">' + escapeHTML(ghost) + '</i>' : '')) +
 one(mine, mineName) + '</span>';
