@@ -1033,6 +1033,14 @@ async function ossApplySnapshot(raw, restoreOss) {
   } catch (e) {}
   try { if (typeof markTreeFull === 'function') markTreeFull(); } catch (e) {}
   try { if (typeof msgJournalClear === 'function') msgJournalClear(); } catch (e) {}
+  /* 整库替换/合并后，兜底强制把全部对话消息全量重写进 MSGS_STORE。
+   * split 模式下 _doSave 默认只写"脏"对话，刚导入进来的新消息相对旧签名虽是"新"的，
+   * 但为避免任何脏标记/签名比对的遗漏，这里直接强制全量写——
+   * 否则会出现"壳写进 all、消息却没落盘"，刷新后聊天只剩空壳、像没存住。 */
+  try {
+    if (typeof _splitWanted === 'function' && _splitWanted(data)) { _splitMode = true; }
+    if (typeof _msgsDirtyAll !== 'undefined') { _msgsDirtyAll = true; }
+  } catch (e) {}
   const saved = await flushSave();
   if (!saved) throw new Error('这一份没能写进本机主存储：先在 设置 → 数据 → 存储 清掉用不上的大图腾点空间，再试一次');
   /* 回读验证：flushSave 声称写成功了，但有些浏览器（尤其 iOS Safari PWA）
@@ -1069,6 +1077,31 @@ function _ossVerifyPersisted() {
               const want = data && typeof data._savedAt === 'number' ? data._savedAt : null;
               if (want && rec._savedAt !== want) { fin(false); return; }
               if (!rec.chats || typeof rec.chats !== 'object') { fin(false); return; }
+              /* split 模式下 STORE 里只是空壳，真正的消息在 MSGS_STORE。
+               * 这里再核对主对话的消息条数是否真的落了盘，
+               * 防止"壳写进去了、消息却没写"导致刷新后消息全空。 */
+              if (rec._split === 1) {
+                try {
+                  const chats = (data && data.chats) || {};
+                  let pick = (data && data.activeChat) || '';
+                  if (!chats[pick] || !Array.isArray(chats[pick].msgs) || !chats[pick].msgs.length) {
+                    for (const cid in chats) { if (chats[cid] && Array.isArray(chats[cid].msgs) && chats[cid].msgs.length) { pick = cid; break; } }
+                  }
+                  if (pick && chats[pick] && Array.isArray(chats[pick].msgs) && chats[pick].msgs.length) {
+                    const wantN = chats[pick].msgs.length;
+                    const mstore = (typeof MSGS_STORE !== 'undefined' && MSGS_STORE) ? MSGS_STORE : 'msgs';
+                    const mtx = db.transaction(mstore, 'readonly');
+                    const mrq = mtx.objectStore(mstore).get(pick);
+                    mrq.onerror = function () { fin(false); };
+                    mrq.onsuccess = function () {
+                      const mrec = mrq.result;
+                      if (!mrec || !Array.isArray(mrec.msgs) || mrec.msgs.length !== wantN) { fin(false); return; }
+                      fin(true);
+                    };
+                    return;
+                  }
+                } catch (e2) { /* 读不到就放行，交给上面那道壳校验 */ }
+              }
               fin(true);
             } catch (e) { fin(false); }
           };
