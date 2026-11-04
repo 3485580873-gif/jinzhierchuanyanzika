@@ -6508,7 +6508,6 @@ delete p.avNext; delete p.nickNext;
 return p;
 };
 raw.avlib.me = _avFix(raw.avlib.me);
-raw.avlib.me.av = []; raw.avlib.me.nicks = [];
 if (!raw.avlib.by || typeof raw.avlib.by !== 'object') raw.avlib.by = {};
 for (const k of Object.keys(raw.avlib.by)) raw.avlib.by[k] = _avFix(raw.avlib.by[k]);
 for (const k of Object.keys(raw.avlib.by)) {
