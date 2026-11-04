@@ -1033,6 +1033,18 @@ if (d && Array.isArray(d.rounds) && d.rounds[0]) pushSay(d.rounds[0].says);
 pushSay(d.says);
 body.innerHTML = rows.join('');
 }
+/* 从聊天里点开对方递来的纸牌时，showView('deal') 期间的 _dlQuietEnter
+ * 会挡住 app.js 切视图时自动调用的那次 dealEnter()，于是牌桌没建牌、
+ * --dl-page-wall 也没同步：列表页背后一片白（图一），点「收起来」后
+ * 露出的是空白牌桌（图二），只有再点「我来抽 / 让TA抽 / 洗牌」才正常。
+ * 这里在「牌桌还没建过牌」时补一次初始化，让卡片与桌面背景都就位；
+ * 列表页随后再盖回来（dealEnter 内会把 dealPage 设为 hidden）。 */
+try {
+const tbl = _dl$('dealTable');
+if (!tbl || !tbl.querySelector('.dl-pcard')) {
+if (typeof dealEnter === 'function') dealEnter();
+} else { _dlSyncWall(); _dlSyncCompH(); }
+} catch (e) {}
 page.hidden = false;
 }
 function dealClosePage() {

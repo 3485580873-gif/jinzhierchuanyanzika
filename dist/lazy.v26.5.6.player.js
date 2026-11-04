@@ -33,13 +33,13 @@ var PL_SET_TABS = [
 ['account', '账号'],
 ['more', '其他'],
 ];
-var plState = { tab: 'find', setTab: 'companion', favWho: 'mine', listWho: 'mine', list: '', listSort: 'added', perm: '', full: false, lrc: false, vol: false, libKw: '', libSort: 'added', source: false, daily: false, ncmList: '', addTo: '', artist: '' };
+var plState = { tab: 'find', setTab: 'companion', favWho: 'mine', listWho: 'mine', list: '', listSort: 'added', perm: '', full: false, lrc: (typeof data === 'undefined' || !data || data.lyricOn !== false), vol: false, libKw: '', libSort: 'added', source: false, daily: false, ncmList: '', addTo: '', artist: '' };
 var plFindType = '1';
 var plBatchOn = false;
 var plBatchSel = new Set();
 var plPickFrom = '';
 var plAudio = null, plCur_ = null, plInvite = null, plMenu = null, plBound = false;
-var plFloatOn = false;
+var plFloatOn = !!(typeof data !== 'undefined' && data && data.plFloatOn);
 var plCoNoBind = false;
 var plInviteAny = false;
 var plEl = null, plWaEl = null, plWaCtx = null, plWaNode = null, plWaGain = null, plWaBroken = false, _plOnlineDuckNoted = false;
@@ -2715,7 +2715,7 @@ const withWho = _plRoot().withCid ? ' · ' + escapeHTML(_plName(_plRoot().withCi
 const qn = (Array.isArray(_plRoot().queue) ? _plRoot().queue : []).length;
 el.innerHTML = '<div class="pl-dock" data-pl-now="1">' +
 '<span class="pl-dock-prog"><b id="plNowFill"></b></span>' +
-'<span class="pl-dock-av" aria-hidden="true">' + (t.pic ? _plNetImg(t.pic) : '<span class="pl-now-eq"><i></i><i></i><i></i><i></i><i></i><i></i></span>') + '</span>' +
+'<span class="pl-dock-av" aria-hidden="true"><span class="pl-av-ch">' + escapeHTML((t.name || '♪').slice(0, 1)) + '</span>' + (t.pic ? '<img class="pl-dock-img" src="' + escapeHTML(t.pic) + '" alt="" onload="this.dataset.ok=1" onerror="this.remove()">' : '') + '</span>' +
 '<span class="pl-dock-tx"><b>' + escapeHTML(t.name) + '</b><small>' + escapeHTML(_plSrcLabel(t)) + ' · <span id="plNowCur">0:00</span>' +
 (t.dur ? ' / <span id="plNowLeft">' + _plDur(t.dur) + '</span>' : '') + withWho + '</small></span>' +
 '<span class="pl-now-tag" id="plNowTag">' + (playing ? '播放中' : '已暂停') + '</span>' +
@@ -2828,7 +2828,7 @@ fBig = escapeHTML(rows.big); fSmall = escapeHTML(rows.small);
 }
 const favOn = !!(Array.isArray(_plRoot().favs) && _plRoot().favs.indexOf(t.id) >= 0);
 const HEART = 'M12 20.1c-.3 0-.6-.1-.8-.3C8.6 17.6 3 13.6 3 9.1 3 6.3 5.2 4.2 8 4.2c1.6 0 3.1.7 4 1.9 1-1.2 2.4-1.9 4-1.9 2.8 0 5 2.1 5 4.9 0 4.5-5.6 8.5-8.2 10.6-.2.2-.5.4-.8.4z';
-el.innerHTML = '<span class="pl-float-av" aria-hidden="true">' + (t.pic ? _plNetImg(t.pic) : '<span class="pl-now-eq"><i></i><i></i><i></i><i></i><i></i><i></i></span>') + '</span>' +
+el.innerHTML = '<span class="pl-float-av" aria-hidden="true"><span class="pl-av-ch">' + escapeHTML((t.name || '♪').slice(0, 1)) + '</span>' + (t.pic ? '<img class="pl-float-img" src="' + escapeHTML(t.pic) + '" alt="" onload="this.dataset.ok=1" onerror="this.remove()">' : '') + '</span>' +
 '<span class="pl-float-tx"><b>' + fBig + '</b><small>' + fSmall + '</small></span>' +
 '<button type="button" class="pl-float-btn" id="plFloatPrev" aria-label="上一首"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 6h2v12H7zM18 18V6l-8.5 6z"/></svg></button>' +
 '<button type="button" class="pl-float-btn" id="plFloatPlay" data-on="' + (playing ? '1' : '0') + '" aria-label="播放或暂停"><svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>' +
@@ -4649,7 +4649,7 @@ box.innerHTML = '<div class="pl-ask-hd"><span>想和你一起听</span><i>Player
 }
 function _plAvStackHTML(mine, mineName, other, otherName, ghost) {
 const one = (src, nm) => '<i class="pl-av">' +
-(src ? '<span class="av-tx">' + escapeHTML(String(nm || '我').trim().slice(0, 1) || '我') + '</span><img src="' + escapeHTML(src) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : escapeHTML(String(nm || '我').trim().slice(0, 1) || '我')) + '</i>';
+(src ? '<span class="av-tx">' + escapeHTML(String(nm || '我').trim().slice(0, 1) || '我') + '</span><img src="' + escapeHTML(src) + '" alt="" loading="lazy" decoding="async" onload="this.dataset.ok=1" onerror="this.remove()">' : escapeHTML(String(nm || '我').trim().slice(0, 1) || '我')) + '</i>';
 return '<span class="pl-avs">' +
 ((other || otherName) ? one(other, otherName) : (ghost ? '<i class="pl-av gh">' + escapeHTML(ghost) + '</i>' : '')) +
 one(mine, mineName) + '</span>';
@@ -5601,7 +5601,7 @@ const p2 = _plRoot(); _plCoDropPatch(p2.withCid, true);
 renderPlayerFull(); renderPlayerPage(); try { renderPlFloat(); } catch (e) {}
 showToast('已结束一起听 · 想找回就在整屏页点「挑一位陪你听」'); return;
 }
-if (hit('#plfLrcBtn')) { plState.lrc = !plState.lrc; renderPlayerFull(); if (plState.lrc) plLrcEnsure(true); return; }
+if (hit('#plfLrcBtn')) { plState.lrc = !plState.lrc; if (typeof data !== 'undefined' && data) data.lyricOn = plState.lrc; try { save(); } catch (e) {} renderPlayerFull(); if (plState.lrc) plLrcEnsure(true); return; }
 const lrcl = hit('[data-lrc-t]');
 if (lrcl) { const a = plAudio, tt = Number(lrcl.dataset.lrcT); if (a && Number.isFinite(tt)) { plLrcHold = 0; try { a.currentTime = tt; } catch (e2) {} } return; }
 const lsz = hit('[data-pl-lrcsz]');
@@ -5611,8 +5611,8 @@ const nowAt = Date.now();
 if (nowAt - _plFloatBtnAt < 500) return;
 _plFloatBtnAt = nowAt;
 const wasOn = plFloatOn || _plFloatLrcOn();
-if (wasOn) { plFloatHide(); showToast('悬浮小框已收起 · 想再要就点亮这枚「小框」'); }
-else { plFloatOn = true; renderPlFloat(); showToast('悬浮小框已开 · 回聊天页就能看到'); }
+if (wasOn) { plFloatHide(); if (typeof data !== 'undefined' && data) { data.plFloatOn = false; try { save(); } catch (e) {} } showToast('悬浮小框已收起 · 想再要就点亮这枚「小框」'); }
+else { plFloatOn = true; renderPlFloat(); if (typeof data !== 'undefined' && data) { data.plFloatOn = true; try { save(); } catch (e) {} } showToast('悬浮小框已开 · 回聊天页就能看到'); }
 renderPlayerFull();
 return;
 }
@@ -6011,3 +6011,15 @@ document.addEventListener('pointercancel', stop, true);
 })();
 
 (window.__CHUNK_OK__ = window.__CHUNK_OK__ || {})['player'] = true;
+/* 播放器设置持久化：刷新 / 闪退重进后恢复「歌词」「悬浮小框」。
+ * 开关存在 data.lyricOn / data.plFloatOn（切换时已落盘），这里在 chunk
+ * 就绪后补一次渲染，把状态重新画出来，不必再手动重设一遍。 */
+(function () {
+const boot = () => {
+try { if (typeof renderPlayerFull === 'function') renderPlayerFull(); } catch (e) {}
+try { if (typeof renderPlFloat === 'function') renderPlFloat(); } catch (e) {}
+try { if (plState.lrc && typeof plLrcEnsure === 'function') plLrcEnsure(); } catch (e) {}
+};
+if (document.readyState === 'complete') setTimeout(boot, 0);
+else window.addEventListener('load', () => setTimeout(boot, 0), { once: true });
+})();

@@ -20,36 +20,37 @@
  * 而 .app-shell 自己有不透明底色，这两个整页视图像一张白纸盖在上面。
  * 与其去动外壳的层叠（会影响首页），不如让这两个视图各自照桌面同款画一层，
  * 参数（蒙层浓度 / 铺法）直接取桌面那几个 CSS 变量，视觉跟首页完全一致。 */
-body[data-desk-bg="on"] #shixunView,
-body[data-desk-bg="on"] #sleeproomView {
-  position: relative;
-  isolation: isolate;
-}
-body[data-desk-bg="on"] #shixunView::before,
-body[data-desk-bg="on"] #sleeproomView::before {
+/* 跟随判定完全不依赖任何 body 的 data 属性：桌面壁纸由 applyDeskVars()
+ * 打包成 --desk-wall-stack（蒙层 + 壁纸）下发，设了壁纸就有值、没设壁纸
+ * 变量不存在 → none，这两个视图自动回到原本实底，不会凭空蒙一层暗色。
+ * 这样「时讯/助眠跟随桌面背景」是站点内置行为，与备份、铺到设置无关，
+ * 也不会因为属性改名或启动时 data 恢复时机而失效。 */
+#shixunView, #sleeproomView { position: relative; isolation: isolate; }
+#shixunView::before, #sleeproomView::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, var(--desk-wash-a, 0)), rgba(255, 255, 255, var(--desk-wash-a, 0))),
-    linear-gradient(rgba(var(--ink-rgb), var(--desk-veil-a, .44)), rgba(var(--ink-rgb), var(--desk-veil-a, .44))),
-    var(--desk-bg);
+  background-image: var(--desk-wall-stack, none);
   background-size: var(--desk-size, cover);
   background-position: center center;
   background-repeat: no-repeat;
   filter: blur(var(--desk-blur, 0px));
   transform: scale(var(--desk-zoom, 1));
 }
-body[data-desk-bg="on"] #shixunView > .sx-page,
-body[data-desk-bg="on"] #sleeproomView > .srp-page {
-  background: transparent !important;
+/* 内层底板：有壁纸时 --sx-page-bg=transparent 放透。
+ * 故意不写回退值 —— 变量未定义时这条声明自动失效，主样式表（含信纸
+ * 主题 .sx-slip 的 --sx-paper）照常生效，不会抹掉原有配色。 */
+#shixunView > .sx-page, #sleeproomView > .srp-page {
+  background: var(--sx-page-bg) !important;
 }
 
 /* 时讯顶部那条导航栏原本贴着实底，放透一半，壁纸能透上来又不压字 */
 body[data-desk-bg="on"] #shixunView .sx-top,
-body[data-desk-bg="on"] #sleeproomView .srp-top {
+body[data-desk-bg="on"] #sleeproomView .srp-top,
+body[data-ap-desk="on"] #shixunView .sx-top,
+body[data-ap-desk="on"] #sleeproomView .srp-top {
   background: color-mix(in srgb, var(--surface) 62%, transparent) !important;
   backdrop-filter: saturate(1.1) blur(10px);
   -webkit-backdrop-filter: saturate(1.1) blur(10px);
@@ -179,4 +180,56 @@ body .moments-cover:not(.mm-cover-default)[data-cover-fit="contain"] {
   position: absolute !important; inset: 0 !important;
   width: 100% !important; height: 100% !important;
   object-fit: cover !important; z-index: 1 !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 六、头像白底根治
+ *
+ * iOS 上大图（data-URL）常出现「既不 load、也不 error」的悬空态：那张
+ * 透明的 <img> 一直盖在首字层上面，看起来就是一片白底 / 灰圆圈。JS 现在
+ * 会在图片真正解码成功后给它打上 data-ok，在此之前保持透明，底下的首字
+ * 自然露出来；加载失败被 remove 时同理。
+ * ------------------------------------------------------------------------- */
+.cl-av img, .pl-av img,
+.pl-dock-av img, .pl-float-av img { opacity: 0 !important; }
+.cl-av img[data-ok], .pl-av img[data-ok],
+.pl-dock-av img[data-ok], .pl-float-av img[data-ok] { opacity: 1 !important; }
+
+/* 首字兜底层给一点柔和底色，即使图没出来也不是刺眼的纯白 */
+.cl-av .av-tx, .pl-av .av-tx,
+.pl-dock-av .pl-av-ch, .pl-float-av .pl-av-ch {
+  background: color-mix(in srgb, var(--surface, #fff) 78%, var(--muted, #888)) !important;
+  color: var(--ink, #333) !important;
+  font-weight: 600 !important;
+}
+
+/* 播放器 dock / 悬浮小框的头像：首字垫底、图片绝对定位覆盖 */
+.pl-dock-av, .pl-float-av { position: relative !important; }
+.pl-dock-av .pl-av-ch, .pl-float-av .pl-av-ch {
+  position: absolute !important; inset: 0 !important;
+  display: grid !important; place-items: center !important;
+  font-size: 13px !important; z-index: 0 !important;
+}
+.pl-dock-av img, .pl-float-av img {
+  position: absolute !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  object-fit: cover !important; z-index: 1 !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 七、抽牌「全部纸牌」列表页：透出桌面背景
+ *
+ * 点开对方递来的纸牌看到的那一页（.dl-page）原本是实底白，盖住了
+ * #dealView 上同步的桌面壁纸。这里只把「底板」放透，标题栏、纸牌卡片、
+ * 底部按钮仍保持实底，读字不受影响。只有设了桌面壁纸时才生效。
+ * ------------------------------------------------------------------------- */
+body[data-desk-bg="on"] #dealView > .dl-page,
+body[data-ap-desk="on"] #dealView > .dl-page {
+  background: color-mix(in srgb, var(--page, #fff) 62%, transparent) !important;
+}
+body[data-desk-bg="on"] #dealView > .dl-page > .dl-page-head,
+body[data-desk-bg="on"] #dealView > .dl-page > .dl-page-acts,
+body[data-ap-desk="on"] #dealView > .dl-page > .dl-page-head,
+body[data-ap-desk="on"] #dealView > .dl-page > .dl-page-acts {
+  background: color-mix(in srgb, var(--surface, #fff) 82%, transparent) !important;
 }

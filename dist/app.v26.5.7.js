@@ -9614,7 +9614,11 @@ if (src) {
   img.setAttribute('decoding', 'async');
   /* 图挂了就移除，露出底下的首字，而不是空白 */
   img.onerror = function () { try { this.remove(); } catch (e2) {} };
+  /* 图片真正解码成功才显示；否则一直露首字，避免 iOS 上「既不 load 也不
+   * error」的悬空 <img> 把首字盖住，看起来像一片白底/灰圆圈。 */
+  img.onload = function () { try { this.dataset.ok = '1'; } catch (e2) {} };
   i.appendChild(img);
+  if (img.complete && img.naturalWidth) { try { img.dataset.ok = '1'; } catch (e2) {} }
 }
 return i;
 };
@@ -11002,7 +11006,12 @@ const LIST_PAGE = 60;
 const _listPagers = new WeakMap();
 function _listPageFill(host, items, tip, after, pageSize) {
 const old = _listPagers.get(host);
-if (old) { old.obs.disconnect(); _listPagers.delete(host); }
+if (old) {
+try { if (old.obs) old.obs.disconnect(); } catch (e) {}
+if (old.timer) clearTimeout(old.timer);
+old.done = true;
+_listPagers.delete(host);
+}
 host.innerHTML = '';
 let i = 0;
 const sentinel = document.createElement('div');
@@ -11023,16 +11032,28 @@ return i < items.length;
 };
 if (!append()) return;
 host.appendChild(sentinel);
-const obs = new IntersectionObserver(es => {
-for (const e of es) {
-if (!e.isIntersecting) continue;
-obs.unobserve(e.target);
-if (append()) { obs.observe(e.target); }
-else { obs.disconnect(); _listPagers.delete(host); sentinel.remove(); }
-}
-}, { rootMargin: '400px 0px' });
-_listPagers.set(host, { obs, sentinel });
-obs.observe(sentinel);
+/* 原来只靠 IntersectionObserver「哨兵滚进视口」才追加下一段。收藏 / 字卡
+ * 这种整段重建的列表，哨兵常常一直不算可见（内部滚动容器、或主线程被
+ * 占住时 IO 回调排队），于是只显示第一段、剩下的要很久甚至永远加载不
+ * 出来 —— 正是「只加载一半 / 很久才加载完整」的来源。
+ * 现在改成自动连续补完：每追加一段就用 setTimeout 让出主线程，既不卡
+ * 交互，也不依赖滚动或哨兵可见性，文字会很快全部出现（图片仍走懒加载）。 */
+const state = { obs: null, timer: 0, done: false };
+const cleanup = () => {
+state.done = true;
+if (state.obs) { try { state.obs.disconnect(); } catch (e) {} state.obs = null; }
+if (state.timer) { clearTimeout(state.timer); state.timer = 0; }
+_listPagers.delete(host);
+};
+const drain = () => {
+if (state.done) return;
+if (!host.isConnected) { cleanup(); return; }
+if (i >= items.length) { sentinel.remove(); cleanup(); return; }
+if (append()) state.timer = setTimeout(drain, 0);
+else { sentinel.remove(); cleanup(); }
+};
+_listPagers.set(host, state);
+state.timer = setTimeout(drain, 0);
 }
 function _groupSegments(groups, headHtml, cardHtml, budget, counts) {
 const segs = [];
@@ -36890,11 +36911,22 @@ rs.setProperty('--desk-ui-blur', g.uiblur + 'px');
 if (g.bg) {
 if (typeof _warmBgImage === 'function') _warmBgImage(g.bg);
 rs.setProperty('--desk-bg', 'url("' + g.bg + '")');
+/* 时讯 / 助眠内置跟随：把「蒙层 + 桌面壁纸」打包成一个变量下发，
+ * 两个频道的 ::before 直接取用；同时把内层底板放透。全部由这里驱动，
+ * 不依赖任何 body data 属性，也不跟备份 / 铺到设置挂钩。 */
+const _wa = (g.wash / 100).toFixed(3), _va = (g.veil / 100).toFixed(3);
+rs.setProperty('--desk-wall-stack',
+'linear-gradient(rgba(255,255,255,' + _wa + '),rgba(255,255,255,' + _wa + ')),' +
+'linear-gradient(rgba(var(--ink-rgb),' + _va + '),rgba(var(--ink-rgb),' + _va + ')),' +
+'url("' + g.bg + '")');
+rs.setProperty('--sx-page-bg', 'transparent');
 document.body.dataset.apDesk = 'on';
 document.body.dataset.deskBg = 'on';
 if (typeof _deskLiftOnce === 'function') _deskLiftOnce();
 } else {
 rs.removeProperty('--desk-bg');
+rs.removeProperty('--desk-wall-stack');
+rs.removeProperty('--sx-page-bg');
 document.body.dataset.apDesk = 'off';
 document.body.dataset.deskBg = 'off';
 }
