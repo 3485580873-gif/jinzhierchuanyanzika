@@ -1,0 +1,75 @@
+/* ===========================================================================
+ * feat_perf.v1.css —— 渲染降级层（只做「减法」，不改任何配色与版式）
+ *
+ * 两条开关：
+ *   html.perf-scrolling  滚动进行中（停下 160ms 自动撤）
+ *   html.perf-lite       帧率自适应降级（连续掉帧才触发，恢复后自动撤）
+ *
+ * 为什么盯着这两处：iPhone 上最贵的渲染是「position:fixed / sticky 元素带
+ * backdrop-filter，底下的滚动内容又在动」——每一帧都要把背景重新采样一遍
+ * 做高斯模糊。顶栏和输入条正好是这个组合，所以滚动时把它们临时切成实色，
+ * 视觉只差一点点，帧率是立竿见影的；滚动停下立刻恢复磨砂。
+ *
+ * 选择器均按 app.v26.5.8.css 里的真实类名写，不做通配符降级 ——
+ * 通配符（html.perf-lite *）会让每次样式重算都多匹配一遍全树，反而更慢。
+ * ======================================================================== */
+
+/* ---------- 一、滚动进行中：固定层关掉毛玻璃 ---------- */
+html.perf-scrolling .topbar::before,
+html.perf-scrolling .chat-head::before,
+html.perf-scrolling .chat-bars-scope .chat-head::before,
+html.perf-scrolling .composer,
+html.perf-scrolling .composer-row,
+html.perf-scrolling .letter-dock,
+html.perf-scrolling .mate-head,
+html.perf-scrolling .ds-panel,
+html.perf-scrolling .rh-card,
+html.perf-scrolling .upd-card {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 滚动中把重投影收一收：大面积 shadow 在滚动时要逐帧离屏合成 */
+html.perf-scrolling .bubble,
+html.perf-scrolling .dl-card,
+html.perf-scrolling .fav-card {
+  box-shadow: none !important;
+}
+
+/* ---------- 二、帧率降级：停装饰动画、去重阴影 ---------- */
+
+/* 只停「装饰性呼吸/脉动」，来电振铃、录音闪烁这类有功能含义的一律保留 */
+html.perf-lite .vw.vw-live svg,
+html.perf-lite .msg-skel i,
+html.perf-lite .sx-wait::before,
+html.perf-lite .sr-dot.on,
+html.perf-lite .dv-stack,
+html.perf-lite .call-window:not(.connected) .cw-av-disc,
+html.perf-lite .aidv-spin,
+html.perf-lite .pl-now-eq i,
+html.perf-lite .pl-f-eq i {
+  animation: none !important;
+}
+
+/* 进场动画在降级模式下没有意义，还会拖慢切页 */
+html.perf-lite .view.active {
+  animation: none !important;
+}
+html.perf-lite .mo-sheet,
+html.perf-lite .mo-dialog,
+html.perf-lite .fs-sheet {
+  animation: none !important;
+}
+
+/* 大面积投影去掉（阴影在 iOS 上是离屏合成，非常吃 GPU） */
+html.perf-lite .bubble,
+html.perf-lite .dl-card,
+html.perf-lite .fav-card {
+  box-shadow: none !important;
+}
+
+/* 大幅模糊的整层虚化降级成不上滤镜（这类层常驻背景，最费电） */
+html.perf-lite .dl-half-veil,
+html.perf-lite .ap-fd-c {
+  filter: none !important;
+}
