@@ -20,13 +20,13 @@
  * 而 .app-shell 自己有不透明底色，这两个整页视图像一张白纸盖在上面。
  * 与其去动外壳的层叠（会影响首页），不如让这两个视图各自照桌面同款画一层，
  * 参数（蒙层浓度 / 铺法）直接取桌面那几个 CSS 变量，视觉跟首页完全一致。 */
-body[data-ap-desk="on"] #shixunView,
-body[data-ap-desk="on"] #sleeproomView {
+body[data-desk-bg="on"] #shixunView,
+body[data-desk-bg="on"] #sleeproomView {
   position: relative;
   isolation: isolate;
 }
-body[data-ap-desk="on"] #shixunView::before,
-body[data-ap-desk="on"] #sleeproomView::before {
+body[data-desk-bg="on"] #shixunView::before,
+body[data-desk-bg="on"] #sleeproomView::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -42,22 +42,22 @@ body[data-ap-desk="on"] #sleeproomView::before {
   filter: blur(var(--desk-blur, 0px));
   transform: scale(var(--desk-zoom, 1));
 }
-body[data-ap-desk="on"] #shixunView > .sx-page,
-body[data-ap-desk="on"] #sleeproomView > .srp-page {
+body[data-desk-bg="on"] #shixunView > .sx-page,
+body[data-desk-bg="on"] #sleeproomView > .srp-page {
   background: transparent !important;
 }
 
 /* 时讯顶部那条导航栏原本贴着实底，放透一半，壁纸能透上来又不压字 */
-body[data-ap-desk="on"] #shixunView .sx-top,
-body[data-ap-desk="on"] #sleeproomView .srp-top {
+body[data-desk-bg="on"] #shixunView .sx-top,
+body[data-desk-bg="on"] #sleeproomView .srp-top {
   background: color-mix(in srgb, var(--surface) 62%, transparent) !important;
   backdrop-filter: saturate(1.1) blur(10px);
   -webkit-backdrop-filter: saturate(1.1) blur(10px);
 }
 
 /* 助眠频道里那些整块实底的板子（导播台 / 曲单）也放淡一点，否则像贴了块白纸 */
-body[data-ap-desk="on"] #sleeproomView .srp-sheet,
-body[data-ap-desk="on"] #sleeproomView .srp-card {
+body[data-desk-bg="on"] #sleeproomView .srp-sheet,
+body[data-desk-bg="on"] #sleeproomView .srp-card {
   background: color-mix(in srgb, var(--surface) 88%, transparent) !important;
 }
 

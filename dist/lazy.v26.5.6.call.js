@@ -316,6 +316,7 @@ _callLayerObs.observe(document.body, { attributes: true, attributeFilter: ['clas
 } catch (e) {}
 }
 function _callClose() {
+_callClearRecover();
 _callLogFinish();
 _callLiveClear();
 if (_call) { clearTimeout(_call.timer); clearInterval(_call.tick); _call = null; }
@@ -331,6 +332,59 @@ _cfVideoFaceClear(fullEl);
 try { if (data.appearance && data.appearance.bgKeepAlive) setBackgroundKeepAlive(true); } catch {}
 try { if (!document.hidden) { resumeWriteScheduler(); } } catch {}
 _scheduleNextIncomingCall();
+}
+/* ---------------- 通话恢复（刷新 / 闪退重进后弹窗） ----------------
+ * 一通通话真正接通并持续 ≥5 秒后，把关键信息写进 localStorage。
+ * 网站刷新或闪退重进后，若这条记录还在，就弹「是否恢复通话」：
+ *   · 接受 → 重建 _call，并从原接通时刻继续计时（通话时长不归零）
+ *   · 拒绝 → 清掉记录、关闭通话界面
+ * 仅在通话真的连上满 5 秒才写记录，所以 5 秒内的短呼叫不会出现恢复弹窗。 */
+var CALL_RECOVER_KEY = 'zika-call-recover';
+function _callPersist() {
+if (!_call || _call.state !== 'connected') return;
+try {
+const rec = { cid: _call.cid, video: !!_call.video, t0: _call.t0, nm: _callName() };
+localStorage.setItem(CALL_RECOVER_KEY, JSON.stringify(rec));
+} catch (e) {}
+}
+function _callClearRecover() {
+if (_call && _call.recoverTimer) { clearTimeout(_call.recoverTimer); _call.recoverTimer = null; }
+try { localStorage.removeItem(CALL_RECOVER_KEY); } catch (e) {}
+}
+function _callRecoveryCheck() {
+if (_call) return;
+let rec = null;
+try { rec = JSON.parse(localStorage.getItem(CALL_RECOVER_KEY) || 'null'); } catch (e) { rec = null; }
+if (!rec || !rec.cid) return;
+const nm = rec.nm || 'TA';
+const kind = rec.video ? '视频' : '语音';
+openModal('恢复通话', nm + ' 正在和你' + kind + '通话，要接着聊吗？', function () {
+/* 接受：重建并从原接通时刻继续 */
+_callClearRecover();
+_callResume(rec);
+}, {
+noInput: true,
+okText: '恢复通话',
+midBtn: { label: '拒绝恢复', onPick: function () {
+_callClearRecover();
+try { if (typeof showToast === 'function') showToast('已拒绝恢复通话'); } catch (e) {}
+} }
+});
+}
+function _callResume(rec) {
+if (_call) return;
+if (typeof _isGroupChat === 'function' && _isGroupChat()) { _callClearRecover(); return; }
+_call = { cid: rec.cid, state: 'calling', t0: 0, timer: null, tick: null, video: !!rec.video };
+_call.log = null;
+_callLayerWatch(true);
+if (typeof _callGreetText === 'function') { try { _callGreetText(''); } catch (e) {} }
+_callSetStatus('正在恢复…', 'ringing');
+cfOpenOutgoing();
+const full = $('#callFull');
+if (full) full.hidden = false;
+$('#callWindow').hidden = true;
+_enterConnected(rec.t0, true);
+if (rec.video) { setTimeout(function () { if (_call && _call.state === 'connected' && typeof cfEnterVideo === 'function') { try { cfEnterVideo(); } catch (e) {} } }, 320); }
 }
 function chooseCallKind() {
 if (_call) { expandCall(); return; }
@@ -408,6 +462,10 @@ if (_call.video && !resumed) {
 setTimeout(() => { if (_call && _call.state === 'connected' && !_vc) { try { cfEnterVideo(); } catch (e) {} } }, 260);
 }
 if (!resumed && typeof mmCallGreet === 'function' && !_call.video) { const at = _call.cid; setTimeout(() => { if (_call && _call.state === 'connected') mmCallGreet(at); }, 600); }
+/* 通话恢复：接通满 5 秒后才把关键信息落盘，刷新/闪退重进时弹「恢复通话」；
+ * 短于 5 秒的呼叫不会写记录，自然也不会冒出恢复弹窗。 */
+if (_call.recoverTimer) { clearTimeout(_call.recoverTimer); _call.recoverTimer = null; }
+_call.recoverTimer = setTimeout(_callPersist, 5000);
 }
 function endCall() {
 if (!_call) return;
@@ -2308,3 +2366,5 @@ if (p && p.catch) p.catch(() => { _clStopAudio(); if (typeof showToast === 'func
 });
 })();
 (window.__CHUNK_OK__ = window.__CHUNK_OK__ || {})['call'] = true;
+/* 模块加载（页面刷新/闪退重进后预加载）后，若有未结束的通话记录就弹恢复弹窗 */
+try { _callRecoveryCheck(); } catch (e) {}

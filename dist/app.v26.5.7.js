@@ -21608,7 +21608,13 @@ let txt;
 try { txt = JSON.stringify(list || []); } catch (e) { return false; }
 let wrote;
 try { wrote = collectStore().set(key, txt); } catch (e) { wrote = false; }
-if (wrote === false) return false;
+if (wrote === false) {
+/* 本地存储写不进（最常见是配额满了，尤其收藏里夹了大图当 data-URL 时）。
+ * 原来这里静默返回 false，前端多半忽略 → 收藏"看起来存了、刷新后却没了/不全"。
+ * 现在给出明确提示，让用户知道是哪一步丢的，而不是误以为是乱码。 */
+try { if ((list && list.length) && typeof showToast === 'function') showToast('本条收藏没存上：本地存储可能满了（收藏夹里的大图最占地方）。去 设置 → 数据 → 存储 清掉用不上的大图，或把图片迁到云端图库再试'); } catch (e) {}
+return false;
+}
 try { return collectStore().get(key) === txt; } catch (e) { return false; }
 }
 function collectSave(list, cid) { return _collectWriteKey(_collectKey(cid), list); }
@@ -36878,10 +36884,12 @@ if (g.bg) {
 if (typeof _warmBgImage === 'function') _warmBgImage(g.bg);
 rs.setProperty('--desk-bg', 'url("' + g.bg + '")');
 document.body.dataset.apDesk = 'on';
+document.body.dataset.deskBg = 'on';
 if (typeof _deskLiftOnce === 'function') _deskLiftOnce();
 } else {
 rs.removeProperty('--desk-bg');
 document.body.dataset.apDesk = 'off';
+document.body.dataset.deskBg = 'off';
 }
 }
 function deskPageLabel(g) {

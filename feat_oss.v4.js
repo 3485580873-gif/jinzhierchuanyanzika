@@ -1071,6 +1071,18 @@ async function ossApplySnapshot(raw, restoreOss) {
    * 用户完全无从排查。读不到/不一致就明确报错，而不是静默丢数据。 */
   const ok = await _ossVerifyPersisted();
   if (!ok) throw new Error('这一份没能真正写进本机主存储（写入被浏览器丢弃了）：这台设备存储空间可能不够，或浏览器限制了写入。请先清理一些空间再恢复一次。');
+  /* 收藏册：云端备份里带着 collectBooks，前面为了不污染主库已临时摘出，
+   * 这里在主库落盘后再单独写回 localStorage（每本一个 collect:cid 键）。
+   * 不调这一步，恢复后收藏会整批消失——用户看到的"收藏没存进备份"其实是恢复时丢了。 */
+  if (incBooks && incBooks.length && typeof collectImportBooks === 'function') {
+    try {
+      const fb = collectImportBooks(incBooks, mode === 'merge' ? 'merge' : 'over');
+      if (fb && fb.failed) { try { showToast('收藏册有 ' + fb.failed + ' 本没写回本机（存储满了或浏览器不让写）'); } catch (e) {} }
+    } catch (e) {}
+  }
+  if (incLayout && typeof uiLayoutImport === 'function') {
+    try { uiLayoutImport(incLayout, mode === 'merge' ? 'merge' : 'over'); } catch (e) {}
+  }
   return true;
 }
 
