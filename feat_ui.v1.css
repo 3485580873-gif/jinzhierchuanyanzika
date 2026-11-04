@@ -1,1 +1,157 @@
-LyogPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQogKiBmZWF0X3VpLnYxLmNzcyDigJTigJQg5qGM6Z2i5Z+65bqV5LiK55qE55WM6Z2i6KGl5LiB77yI6LefIE9TUyDml6DlhbPvvIkKICog54us56uL5oiQ5LiA5Liq5paH5Lu277yM5Lul5ZCO5pS555WM6Z2i5LiN55So5YqoIGZlYXRfb3NzLmNzcwogKiA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PSAqLwoKLyog5rOo77ya5Li75qC35byP6KGo5pivIG1lZGlhPSJwcmludCIg5bu26L+f5Yqg6L2955qE77yM5Lya5Zyo5pys5paH5Lu25LmL5ZCO5omN55Sf5pWI77yMCiAqIOaJgOS7pei/memHjOWFs+mUruWxnuaAp+S4gOW+i+W4piAhaW1wb3J0YW50IOaJjeWOi+W+l+S9j+OAgiAqLwoKLyogLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAqIOS4gOOAgeaXtuiuryAvIOWKqeecoO+8muebtOaOpei3n+edgOahjOmdouWjgee6uOi1sAogKgogKiDov5nkuKTkuKrpopHpgZPmmK8gYXBwLXNoZWxsIOmHjOeahOaVtOmhtSA8c2VjdGlvbiBjbGFzcz0idmlldyI+77yM5pys5p2l5piv5a6e5bqV55m977yMCiAqIOahjOmdouWjgee6uO+8iOmTuuWcqCAuYXBwLXNoZWxsOjpiZWZvcmUgLyBiYWNrZ3JvdW5kLWltYWdlIOS4iu+8ieiiq+Wug+S7rOebluS9j+S6huOAggogKiDov5nph4zlj6rmiorjgIzpobXpnaLlupXmnb/jgI3ov5nkuIDlsYLmlL7pgI/vvIzph4zpnaLnmoTljaHniYfjgIHmu5HmnaHjgIHljaHlhozku43nhLbkv53mjIHlrp7lupUKICog77yI6K+75a2X55qE5Zyw5pa55LiN6IO96YCP77yM5Lya55yL5LiN5riF77yJ44CCCiAqCiAqIOS4jemcgOimgeWcqOOAjOmTuuWIsOOAjemHjOWLvumAie+8muahjOmdouWPquimgeiuvuS6huWjgee6uOWwsei3n+maj+OAggogKiAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tICovCi8qIOWjgee6uOaAjuS5iOadpeeahO+8muahjOmdoumCo+W8oOWbvuWFtuWunueUu+WcqCAuYXBwLXNoZWxsOjpiZWZvcmUg5LiK77yIcG9zaXRpb246Zml4ZWTjgIF6LWluZGV4Oi0x77yJ77yMCiAqIOiAjCAuYXBwLXNoZWxsIOiHquW3seacieS4jemAj+aYjuW6leiJsu+8jOi/meS4pOS4quaVtOmhteinhuWbvuWDj+S4gOW8oOeZvee6uOebluWcqOS4iumdouOAggogKiDkuI7lhbbljrvliqjlpJblo7PnmoTlsYLlj6DvvIjkvJrlvbHlk43pppbpobXvvInvvIzkuI3lpoLorqnov5nkuKTkuKrop4blm77lkIToh6rnhafmoYzpnaLlkIzmrL7nlLvkuIDlsYLvvIwKICog5Y+C5pWw77yI6JKZ5bGC5rWT5bqmIC8g6ZO65rOV77yJ55u05o6l5Y+W5qGM6Z2i6YKj5Yeg5LiqIENTUyDlj5jph4/vvIzop4bop4not5/pppbpobXlrozlhajkuIDoh7TjgIIgKi8KYm9keVtkYXRhLWFwLWRlc2s9Im9uIl0gI3NoaXh1blZpZXcsCmJvZHlbZGF0YS1hcC1kZXNrPSJvbiJdICNzbGVlcHJvb21WaWV3IHsKICBwb3NpdGlvbjogcmVsYXRpdmU7CiAgaXNvbGF0aW9uOiBpc29sYXRlOwp9CmJvZHlbZGF0YS1hcC1kZXNrPSJvbiJdICNzaGl4dW5WaWV3OjpiZWZvcmUsCmJvZHlbZGF0YS1hcC1kZXNrPSJvbiJdICNzbGVlcHJvb21WaWV3OjpiZWZvcmUgewogIGNvbnRlbnQ6ICIiOwogIHBvc2l0aW9uOiBhYnNvbHV0ZTsKICBpbnNldDogMDsKICB6LWluZGV4OiAtMTsKICBwb2ludGVyLWV2ZW50czogbm9uZTsKICBiYWNrZ3JvdW5kLWltYWdlOgogICAgbGluZWFyLWdyYWRpZW50KHJnYmEoMjU1LCAyNTUsIDI1NSwgdmFyKC0tZGVzay13YXNoLWEsIDApKSwgcmdiYSgyNTUsIDI1NSwgMjU1LCB2YXIoLS1kZXNrLXdhc2gtYSwgMCkpKSwKICAgIGxpbmVhci1ncmFkaWVudChyZ2JhKHZhcigtLWluay1yZ2IpLCB2YXIoLS1kZXNrLXZlaWwtYSwgLjQ0KSksIHJnYmEodmFyKC0taW5rLXJnYiksIHZhcigtLWRlc2stdmVpbC1hLCAuNDQpKSksCiAgICB2YXIoLS1kZXNrLWJnKTsKICBiYWNrZ3JvdW5kLXNpemU6IHZhcigtLWRlc2stc2l6ZSwgY292ZXIpOwogIGJhY2tncm91bmQtcG9zaXRpb246IGNlbnRlciBjZW50ZXI7CiAgYmFja2dyb3VuZC1yZXBlYXQ6IG5vLXJlcGVhdDsKICBmaWx0ZXI6IGJsdXIodmFyKC0tZGVzay1ibHVyLCAwcHgpKTsKICB0cmFuc2Zvcm06IHNjYWxlKHZhcigtLWRlc2stem9vbSwgMSkpOwp9CmJvZHlbZGF0YS1hcC1kZXNrPSJvbiJdICNzaGl4dW5WaWV3ID4gLnN4LXBhZ2UsCmJvZHlbZGF0YS1hcC1kZXNrPSJvbiJdICNzbGVlcHJvb21WaWV3ID4gLnNycC1wYWdlIHsKICBiYWNrZ3JvdW5kOiB0cmFuc3BhcmVudCAhaW1wb3J0YW50Owp9CgovKiDml7borq/pobbpg6jpgqPmnaHlr7zoiKrmoI/ljp/mnKzotLTnnYDlrp7lupXvvIzmlL7pgI/kuIDljYrvvIzlo4Hnurjog73pgI/kuIrmnaXlj4jkuI3ljovlrZcgKi8KYm9keVtkYXRhLWFwLWRlc2s9Im9uIl0gI3NoaXh1blZpZXcgLnN4LXRvcCwKYm9keVtkYXRhLWFwLWRlc2s9Im9uIl0gI3NsZWVwcm9vbVZpZXcgLnNycC10b3AgewogIGJhY2tncm91bmQ6IGNvbG9yLW1peChpbiBzcmdiLCB2YXIoLS1zdXJmYWNlKSA2MiUsIHRyYW5zcGFyZW50KSAhaW1wb3J0YW50OwogIGJhY2tkcm9wLWZpbHRlcjogc2F0dXJhdGUoMS4xKSBibHVyKDEwcHgpOwogIC13ZWJraXQtYmFja2Ryb3AtZmlsdGVyOiBzYXR1cmF0ZSgxLjEpIGJsdXIoMTBweCk7Cn0KCi8qIOWKqeecoOmikemBk+mHjOmCo+S6m+aVtOWdl+WunuW6leeahOadv+WtkO+8iOWvvOaSreWPsCAvIOabsuWNle+8ieS5n+aUvua3oeS4gOeCue+8jOWQpuWImeWDj+i0tOS6huWdl+eZvee6uCAqLwpib2R5W2RhdGEtYXAtZGVzaz0ib24iXSAjc2xlZXByb29tVmlldyAuc3JwLXNoZWV0LApib2R5W2RhdGEtYXAtZGVzaz0ib24iXSAjc2xlZXByb29tVmlldyAuc3JwLWNhcmQgewogIGJhY2tncm91bmQ6IGNvbG9yLW1peChpbiBzcmdiLCB2YXIoLS1zdXJmYWNlKSA4OCUsIHRyYW5zcGFyZW50KSAhaW1wb3J0YW50Owp9CgovKiAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KICog5LqM44CB5pyL5Y+L5ZyI5bCB6Z2i77ya5pW05byg5Zu+5a6M5pW05pi+56S677yM5LiN5YaN44CM5pS+5aSn5ZCO5Y+q55yL5Yiw5Lit6Ze05LiA5bCP5Z2X44CNCiAqCiAqIOWOn+adpSBiYWNrZ3JvdW5kLXNpemU6IGNvdmVyIOKAlOKAlCDlrrnlmajlj6rmnInnuqYgMS4zOjHvvIznlKjmiLfkuIrkvKAgMTY6OSDmiJbmm7Tlrr3nmoTlm74KICog5Lya6KKr5oyJ6auY5bqm5pS+5aSn5Yiw5Lik5YCN5Lul5LiK77yM5qiq5ZCR5Y+q6Zyy5Ye65Lit6Ze0IDQwJSDlt6blj7PvvIznnIvotbfmnaXlsLHmmK/jgIzlj6rmiKrkuobkuIDop5LjgI3jgIIKICog5pS55oiQIGNvbnRhaW7vvJrlm77niYfnrYnmr5TnvKnliLDog73mlbTkuKrmlL7ov5vlsIHpnaLmoYbvvIzlm5vlkajnlKjpobXpnaLlupXoibLooaXpvZDjgIIKICogLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSAqLwoubW9tZW50cy1jb3ZlciB7CiAgYmFja2dyb3VuZC1zaXplOiBjb250YWluICFpbXBvcnRhbnQ7CiAgYmFja2dyb3VuZC1wb3NpdGlvbjogY2VudGVyIGNlbnRlciAhaW1wb3J0YW50OwogIGJhY2tncm91bmQtcmVwZWF0OiBuby1yZXBlYXQgIWltcG9ydGFudDsKICBiYWNrZ3JvdW5kLWNvbG9yOiB2YXIoLS1zdXJmYWNlKTsKfQoKLyogLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAqIOS4ieOAgei+k+WFpeahhu+8muWNleihjCBpbnB1dCDpgIDlm57lpJrooYwgdGV4dGFyZWHvvIjmiZPlrZflvoDkuIvplb/pq5jvvIzkuKTooYzlsIHpobbvvIkKICoKICog5pen56uZ5bCx5piv6L+Z5LmI5YGa55qE77yaPHRleHRhcmVhIHJvd3M9IjEiPiArIF9tc2dJbnB1dEdyb3coKe+8jAogKiDnqbrnmoTml7blgJnlm57ljZXooYzpq5jvvIzovpPlhaXlj5jplb/lsLHkuIDooYzkuIDooYzlvoDkuIvplb/vvIzotoXov4fkuKTooYzvvIjnuqYgNjBweO+8ieWwseS4jeWGjemVv+mrmOOAgQogKiDmlLnmiJDmoYblhoXkuIrkuIvmu5rliqgg4oCU4oCUIOi/meagt+W6leagj+mrmOW6puaYr+aBkuWumueahO+8jOS4jeS8muaKiuaVtOadoeW6leagj+W+gOS4iumhtuOAggogKiB2MjYg5oqK5a6D6YCA5YyW5oiQ5LqG5Y2V6KGMIDxpbnB1dD7vvIzmiZPlrZflpJrkuoblj6rog73lvoDlt6bmu5rvvIznnIvkuI3liLDliY3pnaLlhpnkuobku4DkuYjjgIIKICoKICog5bC65a+45b+F6aG75ZKMIGZlYXRfaW5wdXQudjEuanMg6YeM55qEIE1JTiAvIE1BWCDlr7nkuIrvvJoKICogICDljZXooYwgPSAxNnB4IOWtlyDDlyAxLjM1IOihjOmrmCArIOS4iuS4i+WQhCA2cHgg5YaF6L656LedIOKJiCAzNHB4CiAqICAg5Lik6KGMIOKJiCA1NXB477yM56ys5LiJ6KGMIDc3cHgg5bey6LaFIDYwcHgg5LiK6ZmQIOKGkiDoh6rnhLblsIHlnKjkuKTooYwKICogLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSAqLwouY29tcG9zZXIgLmNvbXBvc2VyLXJvdyB0ZXh0YXJlYSB7CiAgbWFyZ2luOiAwICFpbXBvcnRhbnQ7CiAgZmxleDogMSAxIGF1dG8gIWltcG9ydGFudDsKICBtaW4td2lkdGg6IDAgIWltcG9ydGFudDsKICB3aWR0aDogYXV0byAhaW1wb3J0YW50OwogIG1heC13aWR0aDogbm9uZSAhaW1wb3J0YW50OwogIGRpc3BsYXk6IGJsb2NrICFpbXBvcnRhbnQ7CiAgYm94LXNpemluZzogYm9yZGVyLWJveCAhaW1wb3J0YW50OwogIGJhY2tncm91bmQ6IHRyYW5zcGFyZW50ICFpbXBvcnRhbnQ7CiAgYm9yZGVyOiAwICFpbXBvcnRhbnQ7CiAgcGFkZGluZzogNnB4IDZweCAhaW1wb3J0YW50OwogIGJvcmRlci1yYWRpdXM6IHZhcigtLXItY2FyZCkgIWltcG9ydGFudDsKICBvdXRsaW5lOiBub25lICFpbXBvcnRhbnQ7CiAgLXdlYmtpdC1hcHBlYXJhbmNlOiBub25lICFpbXBvcnRhbnQ7CiAgYXBwZWFyYW5jZTogbm9uZSAhaW1wb3J0YW50OwogIGZvbnQtZmFtaWx5OiBpbmhlcml0ICFpbXBvcnRhbnQ7CiAgZm9udC1zaXplOiBtYXgoMWVtLCAxNnB4KSAhaW1wb3J0YW50OyAgIC8qIOWwj+S6jiAxNnB4IOaXtiBpT1Mg6IGa54Sm5Lya6Ieq5Yqo5pS+5aSn5pW06aG1ICovCiAgbGluZS1oZWlnaHQ6IDEuMzUgIWltcG9ydGFudDsKICB0ZXh0LWFsaWduOiBsZWZ0ICFpbXBvcnRhbnQ7CiAgY29sb3I6IHZhcigtLWFwLWNvbXAtdGV4dC1pbmssICMxYzE5MTcpOwogIHJlc2l6ZTogbm9uZSAhaW1wb3J0YW50OwogIHdoaXRlLXNwYWNlOiBwcmUtd3JhcCAhaW1wb3J0YW50OwogIG92ZXJmbG93LXg6IGhpZGRlbiAhaW1wb3J0YW50OwogIC8qIOaBkuWumiBhdXRv77ya5YaF5a655rKh6LaF5Ye65pe25LiN5Lya5Ye6546w5rua5Yqo5p2h77yI5LiL6Z2i5Lik5p2h5oqK5rua5Yqo5p2h5Lmf6JeP5LqG77yJ77yMCiAgICog6LaF5Ye65Lik6KGM5omN55yf55qE6IO95LiK5LiL5rua44CC5YaZ5oiQIGhpZGRlbiAhaW1wb3J0YW50IOS8muaKiiBKUyDorr7nmoTooYzlhoUKICAgKiBvdmVyZmxvdy15IOS4gOi1t+WOi+atu++8jOmVv+aWh+acrOWwsea7muS4jeWKqOS6huOAgiAqLwogIG92ZXJmbG93LXk6IGF1dG8gIWltcG9ydGFudDsKICBvdmVyZmxvdy13cmFwOiBicmVhay13b3JkICFpbXBvcnRhbnQ7CiAgd29yZC1icmVhazogbm9ybWFsICFpbXBvcnRhbnQ7CiAgLXdlYmtpdC1vdmVyZmxvdy1zY3JvbGxpbmc6IHRvdWNoOwogIGhlaWdodDogMzRweDsKICBtaW4taGVpZ2h0OiAzNHB4OwogIG1heC1oZWlnaHQ6IDYwcHg7CiAgc2Nyb2xsYmFyLXdpZHRoOiBub25lOwp9Ci5jb21wb3NlciAuY29tcG9zZXItcm93IHRleHRhcmVhOjotd2Via2l0LXNjcm9sbGJhciB7IGRpc3BsYXk6IG5vbmU7IGhlaWdodDogMDsgd2lkdGg6IDA7IH0KLmNvbXBvc2VyIC5jb21wb3Nlci1yb3cgdGV4dGFyZWE6OnBsYWNlaG9sZGVyIHsgY29sb3I6IHZhcigtLXBoLWluayk7IG9wYWNpdHk6IDE7IH0KLmNvbXBvc2VyIC5jb21wb3Nlci1yb3cgdGV4dGFyZWE6Zm9jdXMgeyBib3gtc2hhZG93OiBub25lICFpbXBvcnRhbnQ7IH0KCi8qIOmVv+WIsOS4pOihjOaXtu+8jOaMiemSrui3n+edgOi0tOW6leWvuem9kO+8jOWQpuWImeWchuinkuiDtuWbiumHjOaMiemSruS8mumjmOWcqOS4remXtCAqLwouY29tcG9zZXIgLmNvbXBvc2VyLXJvdy5ncm93IHsKICBhbGlnbi1pdGVtczogZmxleC1lbmQgIWltcG9ydGFudDsKICBib3JkZXItcmFkaXVzOiAyMnB4ICFpbXBvcnRhbnQ7Cn0KCi8qIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQogKiDlm5vjgIHkupHnq6/lm77lupPvvIhPU1PvvInljaHniYfvvJrlrZflj7flm57liLDlkozns7vnu5/orr7nva7pobXkuIDoh7QKICoKICog6K6+572u6aG15YW25a6D5YiG57uE55So55qE5pivIDExcHgg5bCP5qCH562+77yILnN0LXNlY++8iSsgMTFweCDor7TmmI7vvIguc3Qtbm90Ze+8ie+8jAogKiDogIwgT1NTIOWNoeeJh+eUqOS6huS4ieS4qiAyMnB4IOeahCAuc3QtaGVybyDlpKfmoIfpopjvvIzmmL7lvpfmr5TmlbTpobXpg73lpKfjgIIKICog6L+Z6YeM5oqK5LqR56uv5Zu+5bqT5Y2h54mH55qE5a2X5Y+35Y6L5Zue44CM57O757uf44CN57qn5Yir77ya5qCH6aKYIDE1cHjjgIHor7TmmI4v5oyJ6ZKuIDEycHjjgIEKICog6L6T5YWl5qGGIDEzcHjvvIzlkozorr7nva7pobXmlbTkvZPoioLlpY/lr7npvZDjgILkuLvmoLflvI/ooaggbWVkaWE9cHJpbnQg5Zyo5ZCO6Z2i5omN5Yqg6L2977yMCiAqIOaJgOS7peWFqOmDqOW4piAhaW1wb3J0YW50IOaJjeWOi+W+l+S9j+OAggogKiAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tICovCiNjbG91ZEJvZHkgeyBmb250LXNpemU6IDEzcHggIWltcG9ydGFudDsgbGluZS1oZWlnaHQ6IDEuNSAhaW1wb3J0YW50OyB9CiNjbG91ZEJvZHkgLnN0LWhlcm8geyBnYXA6IDhweCAhaW1wb3J0YW50OyBwYWRkaW5nOiAxMHB4IDAgOXB4ICFpbXBvcnRhbnQ7IH0KI2Nsb3VkQm9keSAuc3QtaGVybyBiIHsKICBmb250LXNpemU6IDE1cHggIWltcG9ydGFudDsKICBmb250LXdlaWdodDogNjAwICFpbXBvcnRhbnQ7CiAgbGluZS1oZWlnaHQ6IDEuMjUgIWltcG9ydGFudDsKfQojY2xvdWRCb2R5IC5zdC1oZXJvIHNwYW4geyBmb250LXNpemU6IDEycHggIWltcG9ydGFudDsgbGluZS1oZWlnaHQ6IDEuNTUgIWltcG9ydGFudDsgfQojY2xvdWRCb2R5IC5zdC1ub3RlLAojY2xvdWRCb2R5IC5zdC1ub3RlLnNtYWxsIHsgZm9udC1zaXplOiAxMnB4ICFpbXBvcnRhbnQ7IGxpbmUtaGVpZ2h0OiAxLjYgIWltcG9ydGFudDsgfQojY2xvdWRCb2R5IC5zb2Z0LWJ0biB7IGZvbnQtc2l6ZTogMTJweCAhaW1wb3J0YW50OyB9CiNjbG91ZEJvZHkgLm9zcy1pbiB7IGZvbnQtc2l6ZTogMTNweCAhaW1wb3J0YW50OyB9CiNjbG91ZEJvZHkgbGFiZWwgeyBmb250LXNpemU6IDEycHggIWltcG9ydGFudDsgfQojY2xvdWRCb2R5IGlucHV0W3R5cGU9ImNoZWNrYm94Il0geyB3aWR0aDogMTVweCAhaW1wb3J0YW50OyBoZWlnaHQ6IDE1cHggIWltcG9ydGFudDsgfQo=
+/* ============================================================================
+ * feat_ui.v1.css —— 桌面基底上的界面补丁（跟 OSS 无关）
+ * 独立成一个文件，以后改界面不用动 feat_oss.css
+ * ========================================================================== */
+
+/* 注：主样式表是 media="print" 延迟加载的，会在本文件之后才生效，
+ * 所以这里关键属性一律带 !important 才压得住。 */
+
+/* ---------------------------------------------------------------------------
+ * 一、时讯 / 助眠：直接跟着桌面壁纸走
+ *
+ * 这两个频道是 app-shell 里的整页 <section class="view">，本来是实底白，
+ * 桌面壁纸（铺在 .app-shell::before / background-image 上）被它们盖住了。
+ * 这里只把「页面底板」这一层放透，里面的卡片、滑条、卡册仍然保持实底
+ * （读字的地方不能透，会看不清）。
+ *
+ * 不需要在「铺到」里勾选：桌面只要设了壁纸就跟随。
+ * ------------------------------------------------------------------------- */
+/* 壁纸怎么来的：桌面那张图其实画在 .app-shell::before 上（position:fixed、z-index:-1），
+ * 而 .app-shell 自己有不透明底色，这两个整页视图像一张白纸盖在上面。
+ * 与其去动外壳的层叠（会影响首页），不如让这两个视图各自照桌面同款画一层，
+ * 参数（蒙层浓度 / 铺法）直接取桌面那几个 CSS 变量，视觉跟首页完全一致。 */
+body[data-ap-desk="on"] #shixunView,
+body[data-ap-desk="on"] #sleeproomView {
+  position: relative;
+  isolation: isolate;
+}
+body[data-ap-desk="on"] #shixunView::before,
+body[data-ap-desk="on"] #sleeproomView::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, var(--desk-wash-a, 0)), rgba(255, 255, 255, var(--desk-wash-a, 0))),
+    linear-gradient(rgba(var(--ink-rgb), var(--desk-veil-a, .44)), rgba(var(--ink-rgb), var(--desk-veil-a, .44))),
+    var(--desk-bg);
+  background-size: var(--desk-size, cover);
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(var(--desk-blur, 0px));
+  transform: scale(var(--desk-zoom, 1));
+}
+body[data-ap-desk="on"] #shixunView > .sx-page,
+body[data-ap-desk="on"] #sleeproomView > .srp-page {
+  background: transparent !important;
+}
+
+/* 时讯顶部那条导航栏原本贴着实底，放透一半，壁纸能透上来又不压字 */
+body[data-ap-desk="on"] #shixunView .sx-top,
+body[data-ap-desk="on"] #sleeproomView .srp-top {
+  background: color-mix(in srgb, var(--surface) 62%, transparent) !important;
+  backdrop-filter: saturate(1.1) blur(10px);
+  -webkit-backdrop-filter: saturate(1.1) blur(10px);
+}
+
+/* 助眠频道里那些整块实底的板子（导播台 / 曲单）也放淡一点，否则像贴了块白纸 */
+body[data-ap-desk="on"] #sleeproomView .srp-sheet,
+body[data-ap-desk="on"] #sleeproomView .srp-card {
+  background: color-mix(in srgb, var(--surface) 88%, transparent) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 二、朋友圈封面：整张图完整显示，不再「放大后只看到中间一小块」
+ *
+ * 原来 background-size: cover —— 容器只有约 1.3:1，用户上传 16:9 或更宽的图
+ * 会被按高度放大到两倍以上，横向只露出中间 40% 左右，看起来就是「只截了一角」。
+ * 改成 contain：图片等比缩到能整个放进封面框，四周用页面底色补齐。
+ * ------------------------------------------------------------------------- */
+.moments-cover {
+  background-size: contain !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  background-color: var(--surface);
+}
+
+/* ---------------------------------------------------------------------------
+ * 三、输入框：单行 input 退回多行 textarea（打字往下长高，两行封顶）
+ *
+ * 旧站就是这么做的：<textarea rows="1"> + _msgInputGrow()，
+ * 空的时候回单行高，输入变长就一行一行往下长，超过两行（约 60px）就不再长高、
+ * 改成框内上下滚动 —— 这样底栏高度是恒定的，不会把整条底栏往上顶。
+ * v26 把它退化成了单行 <input>，打字多了只能往左滚，看不到前面写了什么。
+ *
+ * 尺寸必须和 feat_input.v1.js 里的 MIN / MAX 对上：
+ *   单行 = 16px 字 × 1.35 行高 + 上下各 6px 内边距 ≈ 34px
+ *   两行 ≈ 55px，第三行 77px 已超 60px 上限 → 自然封在两行
+ * ------------------------------------------------------------------------- */
+.composer .composer-row textarea {
+  margin: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 6px 6px !important;
+  border-radius: var(--r-card) !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  font-family: inherit !important;
+  font-size: max(1em, 16px) !important;   /* 小于 16px 时 iOS 聚焦会自动放大整页 */
+  line-height: 1.35 !important;
+  text-align: left !important;
+  color: var(--ap-comp-text-ink, #1c1917);
+  resize: none !important;
+  white-space: pre-wrap !important;
+  overflow-x: hidden !important;
+  /* 恒定 auto：内容没超出时不会出现滚动条（下面两条把滚动条也藏了），
+   * 超出两行才真的能上下滚。写成 hidden !important 会把 JS 设的行内
+   * overflow-y 一起压死，长文本就滚不动了。 */
+  overflow-y: auto !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  -webkit-overflow-scrolling: touch;
+  height: 34px;
+  min-height: 34px;
+  max-height: 60px;
+  scrollbar-width: none;
+}
+.composer .composer-row textarea::-webkit-scrollbar { display: none; height: 0; width: 0; }
+.composer .composer-row textarea::placeholder { color: var(--ph-ink); opacity: 1; }
+.composer .composer-row textarea:focus { box-shadow: none !important; }
+
+/* 长到两行时，按钮跟着贴底对齐，否则圆角胶囊里按钮会飘在中间 */
+.composer .composer-row.grow {
+  align-items: flex-end !important;
+  border-radius: 22px !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 四、云端图库（OSS）卡片：字号回到和系统设置页一致
+ *
+ * 设置页其它分组用的是 11px 小标签（.st-sec）+ 11px 说明（.st-note），
+ * 而 OSS 卡片用了三个 22px 的 .st-hero 大标题，显得比整页都大。
+ * 这里把云端图库卡片的字号压回「系统」级别：标题 15px、说明/按钮 12px、
+ * 输入框 13px，和设置页整体节奏对齐。主样式表 media=print 在后面才加载，
+ * 所以全部带 !important 才压得住。
+ * ------------------------------------------------------------------------- */
+#cloudBody { font-size: 13px !important; line-height: 1.5 !important; }
+#cloudBody .st-hero { gap: 8px !important; padding: 10px 0 9px !important; }
+#cloudBody .st-hero b {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+}
+#cloudBody .st-hero span { font-size: 12px !important; line-height: 1.55 !important; }
+#cloudBody .st-note,
+#cloudBody .st-note.small { font-size: 12px !important; line-height: 1.6 !important; }
+#cloudBody .soft-btn { font-size: 12px !important; }
+#cloudBody .oss-in { font-size: 13px !important; }
+#cloudBody label { font-size: 12px !important; }
+#cloudBody input[type="checkbox"] { width: 15px !important; height: 15px !important; }
