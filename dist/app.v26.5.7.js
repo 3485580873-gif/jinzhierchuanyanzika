@@ -505,27 +505,24 @@ const root = document.querySelector('.app-shell') || document.body;
 const id = (cid === undefined ? ((data && data.activeChat) || '') : cid);
 try { taPaint(root, id); } catch (e) {}
 }
-let _taWatch = null;
+let _taWatch = null, _taRaf = 0, _taScheduled = false;
+function taSchedulePaint() {
+if (_taScheduled) return;
+_taScheduled = true;
+const run = () => {
+_taScheduled = false;
+const root = document.querySelector('.app-shell') || document.body;
+if (!root) return;
+try { taPaint(root, (typeof data !== 'undefined' && data && data.activeChat) || ''); } catch (e) {}
+};
+if (typeof requestAnimationFrame === 'function') { cancelAnimationFrame(_taRaf); _taRaf = requestAnimationFrame(run); }
+else setTimeout(run, 0);
+}
 function taPaintWatch() {
 if (_taWatch || typeof MutationObserver !== 'function' || typeof document === 'undefined') return;
 const root = document.querySelector('.app-shell') || document.body;
 if (!root || !root.nodeType) return;
-const paint = node => {
-if (!node) return;
-if (node.nodeType !== 1 && node.nodeType !== 3) return;
-const el = node.nodeType === 1 ? node : node.parentElement;
-if (!el || el.nodeType !== 1) return;
-if (el.closest && el.closest(TA_PAINT_SKIP_SEL)) return;
-const s = node.nodeType === 1 ? (node.textContent || '') : (node.nodeValue || '');
-if (s.indexOf('他') < 0) return;
-taPaint(el, (typeof data !== 'undefined' && data && data.activeChat) || '');
-};
-_taWatch = new MutationObserver(list => {
-for (let i = 0; i < list.length; i++) {
-const added = list[i].addedNodes;
-for (let j = 0; j < added.length; j++) paint(added[j]);
-}
-});
+_taWatch = new MutationObserver(list => { taSchedulePaint(); });
 _taWatch.observe(root, { childList: true, subtree: true });
 }
 if (typeof document !== 'undefined') {
@@ -7451,15 +7448,25 @@ return false;
 function isLSMode() { return _useLS === true; }
 const FLUSH_COALESCE_MS = 400;
 let _flushTimer = null, _flushLastAt = 0, _flushWaiters = [];
+let _mirrorDeferT = null;
+function _deferMirror() {
+try {
+if (typeof document !== 'undefined' && document.visibilityState === 'hidden') { _lsMirror(true); return; }
+const gap = Date.now() - _lsMirrorAt;
+if (gap >= LS_MIRROR_MIN_GAP) { _lsMirror(false); return; }
+if (_mirrorDeferT) return;
+_mirrorDeferT = setTimeout(function () { _mirrorDeferT = null; _deferMirror(); }, Math.max(200, LS_MIRROR_MIN_GAP - gap));
+} catch (e) {}
+}
 function _flushBigNow() {
 _flushTimer = null;
 _flushLastAt = Date.now();
-const ok = _lsMirror(true);
+_deferMirror();
 const waiters = _flushWaiters.splice(0);
 if (_splitWanted()) { _splitMode = true; }
 if (_splitMode) _msgsDirtyAll = true;
 return _doSave().then(r => {
-const v = (r === true && ok !== false); for (const f of waiters) f(v); return v;
+const v = (r === true); for (const f of waiters) f(v); return v;
 });
 }
 function flushSave() {
@@ -31498,8 +31505,8 @@ if (prevView === 'xinxun' && name !== 'xinxun' && typeof xinxunLeave === 'functi
 if (prevView === 'chat' && name !== 'chat' && typeof dealHalfLeave === 'function') dealHalfLeave();
 if (prevView !== name && typeof renderPlFloat === 'function') renderPlFloat();
 try { if (typeof _plFloatReserve === 'function') _plFloatReserve(); } catch (e) {}
-if (typeof taPaint === 'function') {
-try { taPaint(document.querySelector('.app-shell') || document.getElementById(actual), (data && data.activeChat) || ''); } catch (e1) {}
+if (typeof taSchedulePaint === 'function') {
+try { taSchedulePaint(); } catch (e1) {}
 }
 }
 function updateTopbarTitle(name) {
