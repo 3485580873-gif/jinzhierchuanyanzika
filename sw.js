@@ -1,4 +1,4 @@
-// ===== 版本标记 v26.8.10（2026-11-05）：修复样式表 @supports 被打断导致整站无样式（v26.8.9 的毛玻璃改动重做） =====
+// ===== 版本标记 v26.8.10b（2026-11-05）：修复 @supports 整站无样式 + 新版本导航立即生效（不再先给旧页） =====
 // #545（换版后首访「加载不全」）：缓存账本一律**不带版号**。
 //   旧代三个名字是 ordinal-v<ver>-static∶-data，每次 bump 就是两个新账本，activate 再把旧的两本全删掉
 //   ＝**每换一次版本，缓存里那 3MB 代码件必然清零**；而入口引的两件又是内容寻址的新名字（也必然 miss）。
@@ -284,6 +284,15 @@ async function navWithBundle(event) {
   if (fresh && fresh.ok && text) {
     const refs = distRefs(text);
     if (refs.length) {
+      /* 服务器给的那一页比账本里的更新 ⇒ 直接给新页，不等它引的 dist 件全部落进缓存。
+       * 成套判定本意是「别给一张缺资源的页」，可这张页缺的只是还没下过的 css/js，
+       * 浏览器按需拉一次就有；反过来先给旧页的代价，是用户停在上一版（哪怕那一版是坏的），
+       * 要连刷好几次才走到新版。版本号更高就是更新，这条判据已经够用。 */
+      if (cached && fv && cv && fv > cv) {
+        await navVerSave(nav, key, fresh.clone(), text);
+        event.waitUntil(syncNew(key, fresh.clone(), refs, text));
+        return fresh;
+      }
       if (await codeHas(refs)) {
         await navVerSave(nav, key, fresh.clone(), text);
         return fresh;
