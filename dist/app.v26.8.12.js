@@ -26466,6 +26466,8 @@ if (curKey) node.classList.toggle('active', v === curKey);
 bar.appendChild(node);
 });
 _tbSyncDock();
+/* 底栏按钮刚增删过，[data-view] 那张缓存必须作废，否则高亮的还是旧那批 */
+try { _dropDataViewCache(); } catch (e) {}
 }
 function _tbSyncDock() {
 const v = document.body.dataset.view;
@@ -32738,6 +32740,23 @@ const to = bb && bb.dataset.view;
 if (to) showView(to);
 });
 })();
+/* .view 一共 45 个，全部写死在 index.html 里，从来不会增删。
+ * 但在两万节点的文档上，document.querySelectorAll('.view') 一次要 8ms 左右
+ * ——浏览器得把整棵树的 class 都过一遍——而每次切页都要跑两遍（.view 和 [data-view]）。
+ * 缓存成数组，切页就只剩 45 次 classList 操作。 */
+var _viewList = null;
+function _allViews() {
+  if (!_viewList || !_viewList.length) _viewList = Array.prototype.slice.call(document.querySelectorAll('.view'));
+  return _viewList;
+}
+/* 底栏 [data-view] 按钮会随自定义 tabbar 增删，所以这张表要能失效 */
+var _dvList = null;
+function _allDataViews() {
+  if (!_dvList || !_dvList.length) _dvList = Array.prototype.slice.call(document.querySelectorAll('[data-view]'));
+  return _dvList;
+}
+function _dropDataViewCache() { _dvList = null; }
+try { window._dropDataViewCache = _dropDataViewCache; } catch (e) {}
 function showView(name) {
 if (name === 'emotion') { currentSysCardsTab = PRESET_EMO_TAB; name = 'syscards'; }
 if (typeof chunkGate === 'function' && !chunkGate(name)) return;
@@ -32749,7 +32768,10 @@ if (name !== 'chats' && typeof closeSoloTune === 'function') closeSoloTune();
 if (name !== 'chat' && typeof cjPopClose === 'function') cjPopClose();
 if ((name === 'chat' || name === 'chats') && typeof deskPopDismissBgResume === 'function') deskPopDismissBgResume();
 const prevView = document.body.dataset.view || '';
-$$('.view').forEach(v => {
+let _vs = _allViews();
+/* 万一有页面是懒加载后补出来的，缓存里找不到就作废重取一次（正常情况不会走到） */
+if (!_vs.some(function (v) { return v.id === actual; })) { _viewList = null; _vs = _allViews(); }
+_vs.forEach(v => {
 if (v.id === actual) {
 if (!v.classList.contains('active')) v.classList.toggle('no-anim', name === 'chat');
 v.classList.add('active');
@@ -32759,7 +32781,7 @@ v.classList.remove('no-anim');
 }
 });
 const _tabKey = (name === 'chat' && typeof soloTargetId === 'function' && soloTargetId()) ? 'chats' : name;
-$$('[data-view]').forEach(b => {
+_allDataViews().forEach(b => {
 if (b.id === 'backChatsBtn' || b.id === 'topbarTitle') return;
 b.classList.toggle('active', b.dataset.view === _tabKey);
 });
@@ -41644,10 +41666,54 @@ return r.width > 1 && r.height > 1;
 } catch (e) { return false; }
 };
 const bsZ = el => { try { return parseInt(getComputedStyle(el).zIndex, 10) || 0; } catch (e) { return 0; } };
+/* 遮罩池。
+ * BS_LAYER_SEL 里的 [id$="Mask"] 是「属性后缀」选择器，浏览器没法用 id 或类名索引，
+ * 只能把文档里每个元素的 id 逐个拿出来比对。实测 18 万节点时这一句要 75ms；
+ * 而 bsScan 和 bsLayers 各扫一遍，一次弹层探测就是 150ms，每轮 DOM 变动都要跑——
+ * 手机上就是「点一下卡一下」。
+ * 改成：启动时全树登记一次，之后只对「新插进来的节点」做登记，查询只查这个池。 */
+const _bsPool = new Set();
+const _bsIsLayer = el => {
+try {
+if (!el || el.nodeType !== 1) return false;
+const id = el.id;
+if (id && id.length > 4 && id.slice(-4) === 'Mask') return true;
+const cl = el.classList;
+return !!(cl && (cl.contains('app-modal-mask') || cl.contains('tune')));
+} catch (e) { return false; }
+};
+function _bsHarvest(root) {
+try {
+if (!root) return 0;
+let n = 0;
+if (root.nodeType === 1) {
+if (_bsIsLayer(root) && !_bsPool.has(root)) { _bsPool.add(root); n++; }
+if (root.querySelectorAll) {
+const hit = root.querySelectorAll(BS_LAYER_SEL);
+for (let i = 0; i < hit.length; i++) { if (!_bsPool.has(hit[i])) { _bsPool.add(hit[i]); n++; } }
+}
+return n;
+}
+if (root.querySelectorAll) {
+const hit = root.querySelectorAll(BS_LAYER_SEL);
+for (let i = 0; i < hit.length; i++) { if (!_bsPool.has(hit[i])) { _bsPool.add(hit[i]); n++; } }
+}
+} catch (e) {}
+return 0;
+}
+/* 池子里只留还挂在文档上的：视图整块卸载后旧遮罩会一起消失，
+ * 留着它们既占内存又会让每一帧都去问一个死节点的样式。 */
+function _bsPoolLive() {
+const out = [];
+for (const el of _bsPool) {
+if (!el || !el.isConnected) { _bsPool.delete(el); continue; }
+out.push(el);
+}
+return out;
+}
 const bsLayers = () => {
 const out = [];
-let nodes;
-try { nodes = document.querySelectorAll(BS_LAYER_SEL); } catch (e) { return out; }
+const nodes = _bsPoolLive();
 for (let i = 0; i < nodes.length; i++) {
 const el = nodes[i];
 if (_bsDead.has(el) || !bsBoxed(el)) continue;
@@ -41656,23 +41722,42 @@ out.push(el);
 out.sort((a, b) => bsZ(b) - bsZ(a));
 return out;
 };
-const _bsSeen = new Set();
-const _bsMo = typeof MutationObserver === 'function' ? new MutationObserver(() => { bsSchedule(); }) : null;
+const _bsSeen = new WeakSet();
+const _bsMo = typeof MutationObserver === 'function' ? new MutationObserver(muts => {
+try {
+let dirty = false;
+for (let i = 0; i < muts.length; i++) {
+const mu = muts[i];
+/* 属性变化只看这一个元素自己是不是遮罩，绝不扫它的子树：
+ * 切页时 showView 会改 45 个 view 的 class，每个都扫一遍子树
+ * 就等于把「全树扫描」做了 45 次，比原来的 bug 还慢十倍。 */
+if (mu.type === 'attributes') {
+if (_bsIsLayer(mu.target) && !_bsPool.has(mu.target)) { _bsPool.add(mu.target); bsWatch(mu.target); dirty = true; }
+continue;
+}
+const added = mu.addedNodes;
+if (!added || !added.length) continue;
+for (let j = 0; j < added.length; j++) if (_bsHarvest(added[j])) dirty = true;
+}
+} catch (e) {}
+bsSchedule();
+}) : null;
 function bsWatch(el) {
-if (_bsSeen.has(el)) return;
+if (!el || _bsSeen.has(el)) return;
 _bsSeen.add(el);
 if (_bsMo) { try { _bsMo.observe(el, { attributes: true, attributeFilter: ['hidden', 'class', 'style'] }); } catch (e) {} }
 }
 function bsScan() {
-try {
-const nodes = document.querySelectorAll(BS_LAYER_SEL);
-for (let i = 0; i < nodes.length; i++) bsWatch(nodes[i]);
-} catch (e) {}
+/* 不再全树扫：池子里的元素已在入池时登记过监听 */
+const live = _bsPoolLive();
+for (let i = 0; i < live.length; i++) bsWatch(live[i]);
 }
 if (_bsMo) {
-try { _bsMo.observe(document.body, { childList: true }); } catch (e) {}
-const shell = document.querySelector('.app-shell');
-if (shell) { try { _bsMo.observe(shell, { childList: true }); } catch (e) {} }
+/* 只订阅「新插进来的节点」。属性变化交给 bsWatch 对池里那几个元素精确订阅，
+ * 不用 subtree:true 把全文档的 class 变动都收上来。 */
+try { _bsMo.observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+/* 启动时全树登记一次：这是整个生命周期里唯一一次属性后缀全扫 */
+_bsHarvest(document.body);
 }
 let _bsTimer = null;
 function bsSchedule() {
