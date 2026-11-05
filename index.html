@@ -18,9 +18,9 @@
   <link rel="stylesheet" href="feat_ui.v5.css">
   <link rel="stylesheet" href="feat_glass.v2.css">
   <link rel="stylesheet" href="feat_perf.v1.css">
-  <link rel="stylesheet" href="feat_v27.v2.css">
+  <link rel="stylesheet" href="feat_v27.v3.css">
   <script defer src="feat_oss_boot.v4.js"></script>
-  <script defer src="dist/app.v26.8.21.js"></script>
+  <script defer src="dist/app.v26.8.24.js"></script>
   <script defer src="feat_v27_bridge.v1.js"></script>
   <script defer src="feat_oss.v7.js"></script>
   <script defer src="feat_input.v1.js"></script>
@@ -260,7 +260,7 @@
 
 
 
-      var BOOT_FILES = ["dist/app.v26.8.10.css","dist/app.v26.8.21.js"];
+      var BOOT_FILES = ["dist/app.v26.8.10.css","dist/app.v26.8.24.js"];
 
 
 
@@ -2125,6 +2125,7 @@
        
       <p class="mm-quiet" id="mmQuiet" hidden></p>
       <div class="moments-cover" id="momentsCover" hidden>
+        <button type="button" class="mc-back" id="mcBackBtn" hidden>‹ 返回全部</button>
         <span class="mc-hint" id="mcHint" hidden>轻触更换封面</span>
         <span class="mc-name" id="mcName"></span>
         <button type="button" class="mc-avatar" id="mcAvatarBtn" title="朋友圈头像"><span id="mcAvatarImg"></span></button>
@@ -2196,10 +2197,14 @@
             <div class="mm-set-row"><span class="mm-fl">来点赞的间隔</span><input type="text" id="mmLikeMin" min="1" max="3600" inputmode="numeric"><span class="mm-fu">–</span><input type="text" id="mmLikeMax" min="1" max="3600" inputmode="numeric"><span class="mm-fu">秒</span></div>
             <div class="mm-set-row"><span class="mm-fl">来评论</span><input type="text" id="mmTaCommentPostProb" min="0" max="100" inputmode="numeric"><span class="mm-fu">%</span></div>
             <div class="mm-set-row"><span class="mm-fl">来收藏</span><input type="text" id="mmTaCollectProb" min="0" max="100" inputmode="numeric"><span class="mm-fu">%</span></div>
+            <div class="mm-set-row"><span class="mm-fl">来贴贴纸</span><input type="text" id="mmTaStickerProb" min="0" max="100" inputmode="numeric"><span class="mm-fu">%</span></div>
+            <div class="mm-set-row"><span class="mm-fl">来贴贴纸的间隔</span><input type="text" id="mmTaStickerMin" min="1" max="3600" inputmode="numeric"><span class="mm-fu">–</span><input type="text" id="mmTaStickerMax" min="1" max="3600" inputmode="numeric"><span class="mm-fu">秒</span></div>
             <p class="fs-sheet-note">「来评论」出厂填 0＝TA 不请自来地评论你发的东西这一档是关着的；填上数＝你每发一条，TA 都有这个概率来说一句。</p>
           </div>
           <div class="mm-set-sec">
             <div class="mm-sec-h"><b>你互动之后</b><span>你评了论、回了楼、点了赞，TA 怎么接</span></div>
+            <div class="mm-set-row"><span class="mm-fl">你贴贴纸后 TA 回贴</span><input type="text" id="mmStickerReplyProb" min="0" max="100" inputmode="numeric"><span class="mm-fu">%</span></div>
+            <div class="mm-set-row"><span class="mm-fl">回贴的间隔</span><input type="text" id="mmStickerReplyMin" min="1" max="3600" inputmode="numeric"><span class="mm-fu">–</span><input type="text" id="mmStickerReplyMax" min="1" max="3600" inputmode="numeric"><span class="mm-fu">秒</span></div>
             <div class="mm-set-row"><span class="mm-fl">你评论后 TA 接话</span><input type="text" id="mmCommentProb" min="0" max="100" inputmode="numeric"><span class="mm-fu">%</span></div>
             <div class="mm-set-row"><span class="mm-fl">接话的间隔</span><input type="text" id="mmCommentMin" min="1" max="3600" inputmode="numeric"><span class="mm-fu">–</span><input type="text" id="mmCommentMax" min="1" max="3600" inputmode="numeric"><span class="mm-fu">秒</span></div>
             <div class="mm-set-row"><span class="mm-fl">你回复后 TA 接话</span><input type="text" id="mmReplyProb" min="0" max="100" inputmode="numeric"><span class="mm-fu">%</span></div>
@@ -6532,6 +6537,28 @@
      
     <div class="sr-float" id="srFloat" hidden></div>
         <div class="sr-float-menu" id="srFloatMenu" hidden></div>
+    <div class="fs-sheet-mask" id="mmStkViewMask" hidden>
+      <div class="fs-sheet" id="mmStkViewSheet">
+        <div class="fs-sheet-bar">
+          <div class="fs-sheet-t"><span class="fs-sheet-ti">贴纸</span><span class="fs-sheet-en">STICKER</span></div>
+          <button type="button" class="fs-sheet-close" id="mmStkViewClose" aria-label="关闭贴纸查看">×</button>
+        </div>
+        <div class="fs-sheet-body">
+          <div class="mm-stkv-stage" id="mmStkViewStage"></div>
+          <div class="mm-stkv-nav" id="mmStkViewNav" hidden>
+            <button type="button" class="mc-chip" id="mmStkViewPrev" aria-label="上一张">‹</button>
+            <span class="mm-stkv-n" id="mmStkViewN"></span>
+            <button type="button" class="mc-chip" id="mmStkViewNext" aria-label="下一张">›</button>
+          </div>
+          <div class="mm-stkv-dial" id="mmStkViewDial" hidden>
+            <div class="mm-set-row"><span class="mm-fl">大小</span><input type="range" id="mmStkViewS" min="60" max="200" step="5" value="100"><span class="mm-fu" id="mmStkViewSV">100%</span></div>
+            <div class="mm-set-row"><span class="mm-fl">旋转</span><input type="range" id="mmStkViewR" min="-25" max="25" step="1" value="0"><span class="mm-fu" id="mmStkViewRV">0°</span></div>
+          </div>
+          <button type="button" class="mc-chip mc-danger" id="mmStkViewDel" hidden>撤回这张贴纸</button>
+          <p class="fs-sheet-note" id="mmStkViewNote"></p>
+        </div>
+      </div>
+    </div>
         <section class="view" id="hubView">
       <div class="hub-page">
         <div class="hub-head">
