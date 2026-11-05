@@ -1,0 +1,307 @@
+/* ============================================================================
+ * feat_ui.v1.css —— 桌面基底上的界面补丁（跟 OSS 无关）
+ * 独立成一个文件，以后改界面不用动 feat_oss.css
+ * ========================================================================== */
+
+/* 注：主样式表是 media="print" 延迟加载的，会在本文件之后才生效，
+ * 所以这里关键属性一律带 !important 才压得住。 */
+
+/* ---------------------------------------------------------------------------
+ * 一、时讯 / 助眠：直接跟着桌面壁纸走
+ *
+ * 这两个频道是 app-shell 里的整页 <section class="view">，本来是实底白，
+ * 桌面壁纸（铺在 .app-shell::before / background-image 上）被它们盖住了。
+ * 这里只把「页面底板」这一层放透，里面的卡片、滑条、卡册仍然保持实底
+ * （读字的地方不能透，会看不清）。
+ *
+ * 不需要在「铺到」里勾选：桌面只要设了壁纸就跟随。
+ * ------------------------------------------------------------------------- */
+/* 壁纸怎么来的：桌面那张图其实画在 .app-shell::before 上（position:fixed、z-index:-1），
+ * 而 .app-shell 自己有不透明底色，这两个整页视图像一张白纸盖在上面。
+ * 与其去动外壳的层叠（会影响首页），不如让这两个视图各自照桌面同款画一层，
+ * 参数（蒙层浓度 / 铺法）直接取桌面那几个 CSS 变量，视觉跟首页完全一致。 */
+/* 跟随判定完全不依赖任何 body 的 data 属性：桌面壁纸由 applyDeskVars()
+ * 打包成 --desk-wall-stack（蒙层 + 壁纸）下发，设了壁纸就有值、没设壁纸
+ * 变量不存在 → none，这两个视图自动回到原本实底，不会凭空蒙一层暗色。
+ * 这样「时讯/助眠跟随桌面背景」是站点内置行为，与备份、铺到设置无关，
+ * 也不会因为属性改名或启动时 data 恢复时机而失效。 */
+#shixunView, #sleeproomView { position: relative; isolation: isolate; }
+#shixunView::before, #sleeproomView::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--desk-wall-stack, none);
+  background-size: var(--desk-size, cover);
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(var(--desk-blur, 0px));
+  transform: scale(var(--desk-zoom, 1));
+}
+/* 内层底板：有壁纸时 --sx-page-bg=transparent 放透。
+ * 故意不写回退值 —— 变量未定义时这条声明自动失效，主样式表（含信纸
+ * 主题 .sx-slip 的 --sx-paper）照常生效，不会抹掉原有配色。 */
+#shixunView > .sx-page, #sleeproomView > .srp-page {
+  background: var(--sx-page-bg) !important;
+}
+
+/* 时讯顶部那条导航栏原本贴着实底，放透一半，壁纸能透上来又不压字 */
+body[data-desk-bg="on"] #shixunView .sx-top,
+body[data-desk-bg="on"] #sleeproomView .srp-top,
+body[data-ap-desk="on"] #shixunView .sx-top,
+body[data-ap-desk="on"] #sleeproomView .srp-top {
+  background: color-mix(in srgb, var(--surface) 62%, transparent) !important;
+  backdrop-filter: saturate(1.1) blur(10px);
+  -webkit-backdrop-filter: saturate(1.1) blur(10px);
+}
+
+/* 助眠频道里那些整块实底的板子（导播台 / 曲单）也放淡一点，否则像贴了块白纸 */
+body[data-desk-bg="on"] #sleeproomView .srp-sheet,
+body[data-desk-bg="on"] #sleeproomView .srp-card {
+  background: color-mix(in srgb, var(--surface) 88%, transparent) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 二、朋友圈封面：默认「等比例填充」(cover)
+ *
+ * 用户要求：上传图片应整张等比填满封面框（裁掉溢出部分），而不是只放大露一角、
+ * 也不是整图垫在中间留白边。
+ *   · 默认 background-size: cover —— 等比填满整个封面框（裁掉溢出），即「等比例填充」
+ *   · 仅在封面设置里手动选了「完整显示」(data-cover-fit="contain") 时才整图垫底
+ * 位置微调（_mmCoverPos）通过行内 style 设置，这里不霸占 background-position。
+ * ------------------------------------------------------------------------- */
+.moments-cover {
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-color: var(--surface);
+}
+body .moments-cover:not(.mm-cover-default)[data-cover-fit="contain"] {
+  background-size: contain !important;
+  background-color: var(--well);
+}
+
+/* ---------------------------------------------------------------------------
+ * 三、输入框：单行 input 退回多行 textarea（打字往下长高，两行封顶）
+ *
+ * 旧站就是这么做的：<textarea rows="1"> + _msgInputGrow()，
+ * 空的时候回单行高，输入变长就一行一行往下长，超过两行（约 60px）就不再长高、
+ * 改成框内上下滚动 —— 这样底栏高度是恒定的，不会把整条底栏往上顶。
+ * v26 把它退化成了单行 <input>，打字多了只能往左滚，看不到前面写了什么。
+ *
+ * 尺寸必须和 feat_input.v1.js 里的 MIN / MAX 对上：
+ *   单行 = 16px 字 × 1.35 行高 + 上下各 6px 内边距 ≈ 34px
+ *   两行 ≈ 55px，第三行 77px 已超 60px 上限 → 自然封在两行
+ * ------------------------------------------------------------------------- */
+.composer .composer-row textarea {
+  margin: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 6px 6px !important;
+  border-radius: var(--r-card) !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  font-family: inherit !important;
+  font-size: max(1em, 16px) !important;   /* 小于 16px 时 iOS 聚焦会自动放大整页 */
+  line-height: 1.35 !important;
+  text-align: left !important;
+  color: var(--ap-comp-text-ink, #1c1917);
+  resize: none !important;
+  white-space: pre-wrap !important;
+  overflow-x: hidden !important;
+  /* 恒定 auto：内容没超出时不会出现滚动条（下面两条把滚动条也藏了），
+   * 超出两行才真的能上下滚。写成 hidden !important 会把 JS 设的行内
+   * overflow-y 一起压死，长文本就滚不动了。 */
+  overflow-y: auto !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  -webkit-overflow-scrolling: touch;
+  height: 34px;
+  min-height: 34px;
+  max-height: 60px;
+  scrollbar-width: none;
+}
+.composer .composer-row textarea::-webkit-scrollbar { display: none; height: 0; width: 0; }
+.composer .composer-row textarea::placeholder { color: var(--ph-ink); opacity: 1; }
+.composer .composer-row textarea:focus { box-shadow: none !important; }
+
+/* 长到两行时，按钮跟着贴底对齐，否则圆角胶囊里按钮会飘在中间 */
+.composer .composer-row.grow {
+  align-items: flex-end !important;
+  border-radius: 22px !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 四、云端图库（OSS）卡片：字号回到和系统设置页一致
+ *
+ * 设置页其它分组用的是 11px 小标签（.st-sec）+ 11px 说明（.st-note），
+ * 而 OSS 卡片用了三个 22px 的 .st-hero 大标题，显得比整页都大。
+ * 这里把云端图库卡片的字号压回「系统」级别：标题 15px、说明/按钮 12px、
+ * 输入框 13px，和设置页整体节奏对齐。主样式表 media=print 在后面才加载，
+ * 所以全部带 !important 才压得住。
+ * ------------------------------------------------------------------------- */
+#cloudBody { font-size: 13px !important; line-height: 1.5 !important; }
+#cloudBody .st-hero { gap: 8px !important; padding: 10px 0 9px !important; }
+#cloudBody .st-hero b {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+}
+#cloudBody .st-hero span { font-size: 12px !important; line-height: 1.55 !important; }
+#cloudBody .st-note,
+#cloudBody .st-note.small { font-size: 12px !important; line-height: 1.6 !important; }
+#cloudBody .soft-btn { font-size: 12px !important; }
+#cloudBody .oss-in { font-size: 13px !important; }
+#cloudBody label { font-size: 12px !important; }
+#cloudBody input[type="checkbox"] { width: 15px !important; height: 15px !important; }
+
+/* ---------------------------------------------------------------------------
+ * 五、头像兜底：图片加载失败时显示首字，而不是空白
+ *
+ * 听一听、邀请听歌卡片里的头像原先用 <img>，在 iOS 上大图（data-URL）偶尔
+ * 加载失败；旧代码 onerror 直接 remove 掉 <img>，<i> 里就空了 → 一片空白。
+ * 这里让 <i> 永远垫一个首字层 .av-tx（绝对定位、浮在底层），<img> 浮在上层；
+ * 图挂了被 remove 后，底下的首字自然透出来，不再空白。
+ * ------------------------------------------------------------------------- */
+.cl-av, .pl-av { position: relative !important; }
+.cl-av .av-tx, .pl-av .av-tx {
+  position: absolute !important; inset: 0 !important;
+  display: grid !important; place-items: center !important;
+  z-index: 0 !important;
+}
+.cl-av img, .pl-av img {
+  position: absolute !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  object-fit: cover !important; z-index: 1 !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 六、头像兜底
+ *
+ * 层次：首字层在最下，<img> 在上。img 未加载时是透明的（首字自然露出），
+ * 加载成功后自然覆盖首字；加载失败被 onerror 移除，同样露首字。
+ * 注意：不要用「onload 打标才显示」的门控 —— innerHTML 解析场景下命中
+ * 缓存的图片 onload 不可靠（Safari 常不触发），会把能显示的图一直藏着，
+ * 头像就变成了一个首字（名字）。悬空的懒加载 img 用 loading=eager 规避。
+ * ------------------------------------------------------------------------- */
+
+/* 首字兜底层给一点柔和底色，即使图没出来也不是刺眼的纯白 */
+.cl-av .av-tx, .pl-av .av-tx,
+.pl-dock-av .pl-av-ch, .pl-float-av .pl-av-ch {
+  background: color-mix(in srgb, var(--surface, #fff) 78%, var(--muted, #888)) !important;
+  color: var(--ink, #333) !important;
+  font-weight: 600 !important;
+}
+
+/* 播放器 dock / 悬浮小框的头像：首字垫底、图片绝对定位覆盖 */
+.pl-dock-av, .pl-float-av { position: relative !important; }
+.pl-dock-av .pl-av-ch, .pl-float-av .pl-av-ch {
+  position: absolute !important; inset: 0 !important;
+  display: grid !important; place-items: center !important;
+  font-size: 13px !important; z-index: 0 !important;
+}
+.pl-dock-av img, .pl-float-av img {
+  position: absolute !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  object-fit: cover !important; z-index: 1 !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * 七、抽牌「全部纸牌」列表页
+ *
+ * 目标是：点进来只看到「抽到的字卡」＋聊天背景图，牌桌（洗牌堆、底部
+ * 说一句、收起/再抽一把）一点都不许透出来；点「收起来」才回到牌桌。
+ *
+ * 上一版把底板调成 62% 半透明，结果透出来的是**底下的牌桌**而不是壁纸，
+ * 整页糊成一片（报障那张图）。根子在 .dl-page 和牌桌是兄弟节点：底板
+ * 一旦半透明，z-index 更低的牌桌就从缝里钻上来。
+ *
+ * 现在改成：底板自己铺**不透明**的一层壁纸（--dl-page-wall 由
+ * lazy deal.js 的 _dlWallImage() 算出，优先聊天背景 --chat-bg，其次
+ * 桌面壁纸 --desk-bg），壁纸存在就是实图、不存在就是 --page 实色，
+ * 两种情况都把牌桌彻底盖住。同时把牌桌那一套 UI 在列表页打开期间整体
+ * 隐藏（body.deal-page-open，由 deal.js 开关）。
+ * ------------------------------------------------------------------------- */
+body #dealView > .dl-page {
+  background-color: var(--page, #fff) !important;
+  background-image: var(--dl-page-wall, none) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+/* 标题栏与底部按钮条不再铺整条白底。
+ * 上一版给这两条各压了一层 82% 白，等于在背景照片上横着刷了两道白漆：
+ * 照片被拦腰截断，标题字反而更糊（报障图圈的就是这道带子）。
+ * 现在改成「两个小胶囊各自浮着」——照片连续，字也压得住。 */
+body #dealView > .dl-page > .dl-page-head {
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 12px 16px 9px !important;
+  background: none !important;
+}
+body #dealView > .dl-page > .dl-page-head > b {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: .6px !important;
+  color: color-mix(in srgb, var(--ink, #222) 76%, transparent) !important;
+  padding: 4px 11px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--surface, #fff) 74%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--ink, #222) 7%, transparent) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.15) !important;
+  backdrop-filter: blur(12px) saturate(1.15) !important;
+}
+body #dealView > .dl-page > .dl-page-head > span {
+  margin-left: auto !important;
+  font-size: 11.5px !important;
+  letter-spacing: .1px !important;
+  color: color-mix(in srgb, var(--ink, #222) 68%, transparent) !important;
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--surface, #fff) 60%, transparent) !important;
+  -webkit-backdrop-filter: blur(9px) saturate(1.1) !important;
+  backdrop-filter: blur(9px) saturate(1.1) !important;
+}
+/* 卡片区左右留白跟标题胶囊对齐，滚动边界不再歪一格 */
+body #dealView > .dl-page > .dl-page-body {
+  padding: 4px 16px 12px !important;
+}
+/* 字卡从纯白贴片变成「浮在照片上的一张纸」：一层很轻的投影就够，
+   再多就显得脏 */
+body #dealView > .dl-page .dl-sheet1 {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .07), 0 1px 2px rgba(0, 0, 0, .04) !important;
+}
+body #dealView > .dl-page > .dl-page-acts {
+  background: none !important;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+}
+body #dealView > .dl-page > .dl-page-a {
+  background: color-mix(in srgb, var(--surface, #fff) 93%, transparent) !important;
+  border-color: color-mix(in srgb, var(--ink, #222) 11%, transparent) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.15) !important;
+  backdrop-filter: blur(14px) saturate(1.15) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .09) !important;
+}
+body #dealView > .dl-page > .dl-page-a.pri {
+  background: color-mix(in srgb, var(--ink, #222) 8%, color-mix(in srgb, var(--surface, #fff) 92%, transparent)) !important;
+  border-color: color-mix(in srgb, var(--ink, #222) 24%, transparent) !important;
+}
+
+/* 列表页开着的时候，牌桌整套（桌面/洗牌堆/底部说一句/半开条/虚化底）让位。
+   用 visibility 而不是 display，避免牌桌布局被拆掉后重新进场要重算位置 */
+body.deal-page-open #dealView > .dl-table,
+body.deal-page-open #dealView > .dl-msgbar,
+body.deal-page-open #dealView > .dl-half-bar,
+body.deal-page-open #dealView > .dl-half-veil,
+body.deal-page-open #dealView > .dl-topbar,
+body.deal-page-open #dealView > .dl-stage-hint {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
