@@ -18,8 +18,10 @@
   <link rel="stylesheet" href="feat_ui.v5.css">
   <link rel="stylesheet" href="feat_glass.v2.css">
   <link rel="stylesheet" href="feat_perf.v1.css">
+  <link rel="stylesheet" href="feat_v27.v2.css">
   <script defer src="feat_oss_boot.v4.js"></script>
-  <script defer src="dist/app.v26.8.19.js"></script>
+  <script defer src="dist/app.v26.8.21.js"></script>
+  <script defer src="feat_v27_bridge.v1.js"></script>
   <script defer src="feat_oss.v7.js"></script>
   <script defer src="feat_input.v1.js"></script>
   <script defer src="feat_perf.v2.js"></script>
@@ -258,7 +260,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v26.8.10.css','dist/app.v26.8.19.js'];
+      var BOOT_FILES = ["dist/app.v26.8.10.css","dist/app.v26.8.21.js"];
 
 
 
@@ -1870,6 +1872,7 @@
             <div class="bx-actrow"><button type="button" class="ap-btn" id="bxTryBtn">试写一张</button><span class="bx-hint">会花一次额度。</span></div>
             <div class="bx-check" id="bxTryOut"></div>
             <p class="bx-hint" id="bxUsageLine"></p>
+            <div id="bxUsageMore"></div>
             <div class="bx-actrow"><button type="button" class="ap-btn" id="bxUsageClear">用量清零</button></div>
           </details>
         </div>
@@ -2541,6 +2544,16 @@
 
          
         <div class="set-sec" data-tab="ai"><span>AI 功能</span><small>接口一套共用 · 各功能的开关在自己那页</small></div>
+
+        <div class="setting-card set-entry" data-tab="ai" id="bxUsageCard">
+          <button type="button" class="set-entry-row" id="bxUsageHead" aria-expanded="false"><span class="set-entry-tx"><strong>用量与余额</strong><small id="sumBxUsage"></small><small>这套接口一共发了多少次、花了多少 tokens、最近一发是什么时候——打开设置页会顺手帮你查一次余额（半小时内不重复问），也可以点开手查。</small></span></button>
+          <div id="bxUsagePanel" hidden>
+            <p class="bx-hint" id="bxUsageLineSt"></p>
+            <div id="bxUsageMoreSt"></div>
+            <div class="bx-actrow"><button type="button" class="ap-btn" id="bxUsageBalBtn">查一下余额</button></div>
+            <div class="bx-check" id="bxUsageBalOut"></div>
+          </div>
+        </div>
 
         <div class="setting-card set-entry" data-tab="ai">
           <button type="button" class="set-entry-row" data-view="bangxie"><span class="set-entry-tx"><strong>AI 接口 · 帮写字卡</strong><small id="sumBxSet"></small><small>辅助功能：言字卡本质是字卡传讯，聊天里的每一句都由本地字卡池随机抽；接 AI 只是帮忙写卡，不接不影响任何使用。同一套接口与人设还管占卜解读与助眠轻语。</small></span></button>
@@ -4780,7 +4793,8 @@
         <div class="dv-drawn" id="dvDrawn"></div>
          
         <div class="dv-shuffle" id="dvShuffle">
-          <div class="dv-stack" id="dvDeck" role="button" tabindex="0" aria-label="按一下就再洗一次 · 洗完自动摊开">
+            <div class="dv-cutline" id="dvCutLine" aria-hidden="true"></div>
+          <div class="dv-stack" id="dvDeck" role="button" tabindex="0" aria-label="按住横着拖＝切牌后洗 · 轻点＝自动洗一次 · 洗完自动摊开">
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
           </div>
@@ -6516,7 +6530,9 @@
   </div>
 </section>
      
-    <section class="view" id="hubView">
+    <div class="sr-float" id="srFloat" hidden></div>
+        <div class="sr-float-menu" id="srFloatMenu" hidden></div>
+        <section class="view" id="hubView">
       <div class="hub-page">
         <div class="hub-head">
           <div><span class="hub-en mono">FEATURES · 都在这里</span><h2>使用大全</h2></div>
