@@ -1,0 +1,45 @@
+/* feat_glass.v1.css —— 2026-11-05
+ *
+ * 为什么改动：全站 108 处 backdrop-filter（145 条声明）里，绝大多数压在不透明的
+ * 底色上——顶栏的 --topbar-veil 直接就是 --page（页面底色）、输入栏是 --surface、
+ * 面板是 94% 白、卡片是纯白渐变。模糊压在实色上，肉眼一点都看不见，却要求 GPU
+ * 每一帧都重新采样并合成那一层。这是切页/切换功能时卡一下、以及持续发热的一大块。
+ *
+ * 做法：主样式表 dist/app.v26.8.9.css 里所有 backdrop-filter 声明已改为 none
+ * （79 条实际生效的，其余本来就是 none）。本文件只把「背后确实是半透明底、
+ * 去掉模糊就会发糊」的个位数元素单独恢复回来。配色、透明度、圆角一个都没动。
+ *
+ * 恢复清单（只有这些）：
+ *   纸牌页浮起控件（白 62%）· desk 模式浮动面板/预览（62%）·
+ *   心讯卡片（半透明卡面）· 气泡毛玻璃档（用户主动开启才生效）
+ */
+
+body .dl-modes,
+body .dl-shuffle,
+body .dl-half-b,
+body #dealView > .dl-half-x {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+body[data-ap-desk="on"][data-ap-deskrest="on"] .chats-list,
+body[data-ap-desk="on"][data-ap-deskrest="on"] .mb-head,
+body[data-ap-desk="on"] .ds-panel,
+body[data-ap-desk="on"] .ds-pv-head,
+body[data-ap-desk="on"] .ds-pv-card,
+body[data-ap-desk="on"] .ds-pv-label {
+  -webkit-backdrop-filter: blur(var(--desk-ui-blur, 14px)) saturate(115%);
+  backdrop-filter: blur(var(--desk-ui-blur, 14px)) saturate(115%);
+}
+
+body #xinxunView.has-card-see .xn-dc .fc,
+body #xinxunView.has-card-see .xn-wcard {
+  -webkit-backdrop-filter: blur(var(--xn-card-blur, 14px)) saturate(1.16);
+  backdrop-filter: blur(var(--xn-card-blur, 14px)) saturate(1.16);
+}
+
+body[data-ap-frost-bubble="on"] .chat-area .bubble:not(.ask-card):not(.taask-card),
+body[data-ap-frost-bubble="on"] .ap-preview .ap-prev-bub {
+  -webkit-backdrop-filter: blur(var(--frost-bubble-blur, 12px)) saturate(150%);
+  backdrop-filter: blur(var(--frost-bubble-blur, 12px)) saturate(150%);
+}
