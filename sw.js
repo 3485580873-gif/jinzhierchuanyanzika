@@ -1,4 +1,11 @@
-// ===== 版本标记 v26.8.35（2026-11-06）：结构内联。<head> 里加了几行 criticalCss，一次只显示一页；主样式表 881KB 晚到也不会再让 45 个页面竖着堆出来。
+// ===== 版本标记 v26.8.36（2026-11-06）：代码件按体积判真伪。
+//   报障「一直白屏进不去打不开」，机器侧的来由：50KB 那条完整性下限是 2.7MB 单文件时代的尺子，
+//   对现在的 2MB 主包与 900KB 主样式表等于没有——弱网下到 60KB 断线的半件照样落进代码账本；
+//   而 codeCacheFirst 是「命中即返回、绝不重下」（这是故意的，见下），于是这条半件会**永远**是它：
+//   主包语法不完整 ⇒ 整个 app 一行都不执行 ⇒ 每次打开都是白屏，刷新、关标签页、换网络都不好。
+//   三处补：① 尺寸尺子按文件种类给足（见 minBytesFor）② 命中缓存也量一遍，不够就删掉重下
+//   ③ activate 里做一次性大扫除（PURGE_TAG），把已经中毒的机器救回来——只做这一次，之后不再清。
+// ===== v26.8.35：结构内联。<head> 里加了几行 criticalCss，一次只显示一页；主样式表 881KB 晚到也不会再让 45 个页面竖着堆出来。
 // #545（换版后首访「加载不全」）：缓存账本一律**不带版号**。
 //   旧代三个名字是 ordinal-v<ver>-static∶-data，每次 bump 就是两个新账本，activate 再把旧的两本全删掉
 //   ＝**每换一次版本，缓存里那 3MB 代码件必然清零**；而入口引的两件又是内容寻址的新名字（也必然 miss）。
@@ -104,6 +111,7 @@ self.addEventListener('activate', (event) => {
     await migrateIntoNewBooks();
     const keys = await caches.keys();
     await Promise.all(keys.filter((k) => /^ordinal-v\d+-/.test(k)).map((k) => caches.delete(k)));
+    await purgeCodeOnce();   // v26.8.36：一次性大扫除，把已经缓存了半截主包的机器救回来
     await sweepCode();
     await saveSweep();   // BUGS #3072：上次会话没被取走的备份暂存清掉
   })());
@@ -218,8 +226,78 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(cacheFirst(event.request));
 });
 
-const NAV_TIMEOUT = 4500;    // 导航网络那一发的硬超时：github.io 挂起时是白屏到天亮，等 4.5 秒没到就走缓存
-const SYNC_MIN = 50000;      // 代码件完整性下限：入口 249KB∶css 636KB∶js 2.2MB，低于 50KB 必是截断或错误页
+const NAV_TIMEOUT = 9000;    // v26.8.36：4.5s → 9s。github.io 现在常态 6~12s 才回第一包，4.5s 等于「永远判超时」，
+                             // 永远走缓存那条兜底；那兜底又没查成套（见 navWithBundle 尾部），白屏就是这么来的。
+                             // 9s 是折中：超了也还有一套能用的缓存页接着，不会更差。
+const SYNC_MIN = 50000;      // 导航页完整性下限：低于 50KB 的 index.html 必是截断或错误页（页本身 130KB+）
+
+/* v26.8.36 代码件体积尺子（解压后字节，cache 里存的就是解压后的那一份）。
+ * 旧写法对所有代码件都用 SYNC_MIN=50000 —— 那是对 2.7MB 单文件入口的尺子；现在主包 2.04MB、
+ * 主样式表 903KB，一份只剩 60KB 的半件照样「合格」，落盘后又被 cache-first 永久返回。
+ * 这里的数按 2026-11-06 线上实测留了 ~30% 余量；将来主包瘦身到阈值以下，**必须同步改这里**，
+ * 否则正品会被判成半件、每次打开都重下一遍（慢，但不会白屏——宁可慢也不能白）。 */
+const MIN_MAIN_JS = 1200000;   // dist/app.v<ver>.js  实测 2042701
+const MIN_MAIN_CSS = 600000;   // dist/app.v<ver>.css 实测  903132
+const MIN_LAZY = 8000;         // dist/lazy.*.js      实测解压后最小 ~17KB
+function minBytesFor(key) {
+  if (/\/lazy\.v[^/]+\./.test(key)) return MIN_LAZY;
+  if (/\/app\.v[^/]+\.js$/.test(key)) return MIN_MAIN_JS;
+  if (/\/app\.v[^/]+\.css$/.test(key)) return MIN_MAIN_CSS;
+  return SYNC_MIN;
+}
+// 这一版做过一次「清空代码账本」的抢救：中毒的机器不清就永远好不了。
+// 换一个值＝再做一次全量重下（别轻易改，改一次所有用户下次开站重下 3MB）。
+const PURGE_TAG = 'repair-2026-11-06-codeintegrity';
+const META_CACHE = 'ordinal-meta';
+
+// 量一份缓存件够不够长。读 blob 是解压后大小，与 minBytesFor 同一口径。
+// 每次命中都真量一遍（约 5ms）：不能按 key 记「这件我验过」——账本里的东西会被 put 覆盖，
+// 记过一次就等于给后来的半件发了免检通行证（这就是第一版没修好的原因）。
+async function codeLooksWhole(res, key) {
+  const need = minBytesFor(key);
+  try {
+    const n = (await res.clone().blob()).size;
+    return n >= need;
+  } catch (e) { return true; }   // 量不出来就别拦，宁可放行也不要自己造成白屏
+}
+
+// 一张完整的入口页：至少 40KB（线上 460KB 原文）且有 </html> 收尾。
+// 半截页在屏上就是白的，比旧页更糟 —— 旧页至少还能用。
+function htmlWhole(t) {
+  if (!t || t.length < 40000) return false;
+  return /<\/html>\s*$/i.test(t.trim());
+}
+
+// activate 里的一次性大扫除。用一本只有一条记录的 meta 账存「已经清过哪一次」，
+// 与 SW 版本号解耦：以后每次发版不再清（那正是 #545 想避免的「一更新就全量重下」）。
+async function purgeCodeOnce() {
+  try {
+    const meta = await caches.open(META_CACHE);
+    const hit = await meta.match('/__code_purge_tag__');
+    const tag = hit ? await hit.text() : '';
+    if (tag === PURGE_TAG) return;
+    const code = await caches.open(CODE_CACHE);
+    // 只删量出来不够长的那些：全清＝所有人下次开站重下 3MB，没必要。
+    for (const rq of await code.keys()) {
+      try {
+        const r = await code.match(rq);
+        if (!r) continue;
+        const n = (await r.clone().blob()).size;
+        if (n < minBytesFor(canon(rq.url))) await code.delete(rq);
+      } catch (e) {}
+    }
+    // 导航账本里那张半截页也要清：它是白屏最直接的来源，留着就等于没救。
+    try {
+      const nav = await caches.open(NAV_CACHE);
+      for (const rq of await nav.keys()) {
+        let ok = false;
+        try { const r = await nav.match(rq); ok = r ? htmlWhole(await r.clone().text()) : true; } catch (e) { ok = true; }
+        if (!ok) await nav.delete(rq);
+      }
+    } catch (e) {}
+    await meta.put('/__code_purge_tag__', new Response(PURGE_TAG));
+  } catch (e) {}
+}
 
 // 规范键（去查询串）：导航∶代码件∶UPD_PREFETCH 三处读写同一本账，必须同一键才能互相命中
 function canon(u) { const x = new URL(u); x.search = ''; return x.href; }
@@ -278,6 +356,10 @@ async function navWithBundle(event) {
     fresh = await fetchTimeout(request, NAV_TIMEOUT);
     if (fresh && fresh.ok) text = await fresh.clone().text();
   } catch (e) { fresh = null; }
+  /* v26.8.36：一张剖成两半的 index.html 也是 200、也引着那两件 dist，唯一的差别是它没有下半身。
+   * 以前这种页会一路落进导航账本，之后每次打开都是纯白 —— 而且刷新无用（缓存-first 给的就是它）。
+   * 判据只看两样：够不够长、有没有收尾。不合格就当这一发没拿到，走缓存那一份。 */
+  if (fresh && !htmlWhole(text)) fresh = null;
   const cached = (await nav.match(key)) || (await nav.match(navSibling(key))) || (await caches.match(key));
   const ctext = cached ? await cached.clone().text() : '';
 
@@ -319,8 +401,64 @@ async function navWithBundle(event) {
     await navVerSave(nav, key, fresh.clone(), text);
     return fresh;
   }
-  if (cached) return cached;
-  return new Response('Offline', { status: 503 });
+  /* v26.8.36：这一段以前是「缓存里有就给」——不看那张页还站不站得住。
+   * 十月底清过一次 dist 历史件（217 件），手机缓存里那页引的 app.v26.8.2x.js 已经不在了：
+   * github.io 现在常常 6~12 秒才回第一包（NAV_TIMEOUT 4.5 秒必然超），于是**每一发导航都走这条**，
+   * 每次都把那张引着死链的旧页送回去 ⇒ 主包 404 ⇒ 白屏，刷新一百次也一样。
+   * 判据不能是「缓存里有没有」——第一次访问的人代码账本本来就是空的，那样等于把所有人一起误伤。
+   * 只认一件事：那页引的主包在服务器上是不是真的 404 了。探测不到（慢、断网）一律按没死处理。 */
+  if (cached) {
+    const crefs = distRefs(ctext);
+    if (!crefs.length || (await codeHas(crefs))) return cached;
+    if (!(await refsGone(crefs))) return cached;
+  }
+  return fallbackPage();
+}
+
+// 只探主包那一件：它 404 就是死页，别的一概不算。
+// 2.5 秒探不出来就放弃（当作没死）——这个分支只在「缓存页没有配套代码件」时才走到，平时不发请求。
+async function refsGone(crefs) {
+  const mainRef = crefs.filter((f) => /app\.v[0-9.]+\.js$/.test(f))[0];
+  if (!mainRef) return false;
+  try {
+    const abs = new URL(mainRef, self.registration.scope).href;
+    const r = await fetchTimeout(new Request(abs, { method: 'HEAD', cache: 'no-store' }), 2500);
+    return !!r && (r.status === 404 || r.status === 410);
+  } catch (e) { return false; }
+}
+
+// 白屏换成一个「能点」的页面：至少用户知道发生了什么，而且两个出口都在手边。
+function fallbackPage() {
+  const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>言字卡 · 载入没完成</title>
+<style>
+html,body{margin:0;height:100%}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+ background:#F7F7F5;color:#2f3136;text-align:center;padding:28px;
+ font:15px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+h1{font-size:17px;margin:0}
+p{margin:0;color:#8a8f99;font-size:13px;max-width:300px}
+button{appearance:none;border:0;border-radius:12px;padding:11px 20px;font-size:15px;min-width:190px;
+ background:#2f3136;color:#fff}
+button.ghost{background:#e9eaee;color:#2f3136}
+</style></head><body>
+<h1>这次没载入成功</h1>
+<p>缓存里那一页引的程序已经不在线上了。先用下面的「清一下再进」，之后就会正常。</p>
+<button id="c" type="button">清一下再进</button>
+<button id="r" class="ghost" type="button">只重新载入</button>
+<script>
+document.getElementById('r').onclick=function(){location.reload();};
+document.getElementById('c').onclick=function(){
+  var b=document.getElementById('c'); b.textContent='正在清理…'; b.disabled=true;
+  var go=function(){location.reload();};
+  if(window.caches&&caches.keys){
+    caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));})
+      .then(go,go);
+  } else { go(); }
+};
+<\/script></body></html>`;
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
 
 function saveNav(nav, key, res) {
@@ -370,7 +508,7 @@ async function syncNew(key, freshRes, refs, text) {
       return fetch(abs).then((res) => {
         if (!res || !res.ok) return false;
         return res.clone().text().then((t) => {
-          if (t.length < SYNC_MIN) return false;   // 截断的不许落盘（mochi #134 同族）
+          if (t.length < minBytesFor(canon(abs))) return false;   // v26.8.36：按件给尺子，2MB 主包下到 60KB 不许算数
           try { code.put(canon(abs), res); } catch (e) {}
           return true;
         });
@@ -390,18 +528,33 @@ async function codeCacheFirst(request) {
   const code = await caches.open(CODE_CACHE);
   try {
     const cached = await code.match(key);
-    if (cached) return cached;
+    if (cached) {
+      // v26.8.36：命中也要量。半件在这里放过去一次，这台机器就永远白屏（见文件头）。
+      if (await codeLooksWhole(cached, key)) return cached;
+      try { await code.delete(key); } catch (e) {}
+      
+    }
   } catch (e) {}
   try {
     const res = await fetch(request);
     if (res && res.ok) {
       const t = await res.clone().text();
-      const minLen = /\/lazy\.v[^/]+\./.test(key) ? 8000 : SYNC_MIN;   // 分片本来就小：50KB 那条下限会把它们全判成截断
-      if (t.length >= minLen) { try { code.put(key, res.clone()); } catch (e) {} }
+      if (t.length >= minBytesFor(key)) { try { code.put(key, res.clone()); } catch (e) {} }
       return res;
     }
   } catch (e) {}
   return new Response('Offline', { status: 503 });
+}
+
+/* v26.8.36：页面亲口说「我拿回来这一件是坏的」时，别等它自己对不上——直接删。
+ * 页面侧在主包 onerror 或分片跑不出 __CHUNK_OK__ 时会发这条（含主包，不再只管分片）。 */
+async function purgeCodeUrl(url) {
+  try {
+    const key = canon(url);
+    const code = await caches.open(CODE_CACHE);
+    await code.delete(key);
+    
+  } catch (e) {}
 }
 
 // 2026-10-28 流量账：后台那一发从 cache:'reload' 改成 cache:'no-cache' ＋ 一小时节流。
@@ -492,7 +645,7 @@ self.addEventListener('message', (e) => {
       // #431 体积闸从 500KB 降到 50KB：入口从 2.7MB 单文件瘦成 ~0.25MB，旧阈值会把合法新入口误判成截断。
       const isNav = /\.html(\?|$)/.test(u) || /\/$/.test(new URL(u, self.registration.scope).pathname);   // #614：带 ?ts= 的与根路径那一发都算导航页
       return res.clone().text().then(async (t) => {
-        if (t.length < SYNC_MIN) return false;
+        if (t.length < minBytesFor(canon(u))) return false;   // v26.8.36：同 codeCacheFirst 一把尺子，半件不许落盘
         if (isNav && !/<\/html>\s*$/i.test(t.trim())) return false;
         if (isNav) { await navVerSave(nav, canon(u), res, t); return true; }   // #614 与导航同一写手
         try { code.put(canon(u), res); } catch (x) {}
@@ -517,8 +670,7 @@ self.addEventListener('message', (e) => {
   if (d.type !== 'PURGE_CODE' || !d.url) return;
   const run = async () => {
     try {
-      const code = await caches.open(CODE_CACHE);
-      await code.delete(canon(new URL(d.url, self.registration.scope).href));
+      await purgeCodeUrl(new URL(d.url, self.registration.scope).href);
     } catch (x) {}
   };
   try { e.waitUntil(run()); } catch (x) { run(); }
