@@ -800,7 +800,7 @@ async function ossMigrateAll(onProg) {
   const st = document.createElement('style');
   st.id = 'oss-form-style';
   st.textContent = '.oss-form{display:flex;flex-direction:column;gap:8px;padding:4px 0 8px}'
-    + '.oss-in{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font-size:inherit;line-height:1.45;outline:none}'
+    + '.oss-in{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font-size:14px;line-height:1.45;outline:none}'
     + '.oss-in:focus{border-color:var(--accent,#6aa9ff)}';
   document.head.appendChild(st);
 })();
@@ -832,13 +832,17 @@ function _ossXmlText(s) {
 /* 列 Bucket 里的对象。
    OSS 回的是 ListBucketResult（XML），这里用正则解析而不用 DOMParser——
    手机上 XML 命名空间常让 getElementsByTagName 取不到节点。 */
-async function ossListObjects(prefix, maxKeys) {
+async function ossListObjects(prefix, maxKeys, marker) {
   const cfg = ossCfgLoad();
   if (!cfg) throw new Error('还没配置云端图库');
-  const url = _ossV4SignedUrl(cfg, 'GET', '', {
+  const q = {
     prefix: String(prefix || ''),
     'max-keys': String(maxKeys || 200)
-  }, '', 300);
+  };
+  /* 单次 ListObjects 最多回 1000 条，再多要带 marker 翻页。
+     以前只拉一页，云端攒多之后就"只显示前几个"。 */
+  if (marker) q.marker = String(marker);
+  const url = _ossV4SignedUrl(cfg, 'GET', '', q, '', 300);
   let res;
   try {
     res = await fetch(url, { method: 'GET' });
@@ -863,6 +867,21 @@ async function ossListObjects(prefix, maxKeys) {
     const key = pick('Key');
     if (!key) continue;
     out.push({ key: key, size: Number(pick('Size') || 0), last: pick('LastModified') });
+  }
+  return out;
+}
+
+/* 一页一页翻，把 backup/ 底下所有备份都取回来 */
+async function ossListAllBackups() {
+  const out = [];
+  let marker = '';
+  for (let i = 0; i < 20; i++) {
+    const page = await ossListObjects(OSS_BACKUP_PREFIX, 1000, marker);
+    if (!page || !page.length) break;
+    out.push.apply(out, page);
+    if (page.length < 1000) break;
+    marker = page[page.length - 1].key;
+    if (out.length > 3000) break;
   }
   return out;
 }
@@ -1015,6 +1034,19 @@ async function _ossAutoRun() {
       return;
     }
     await ossUploadBackupBlob(blob, 'auto/zika-latest.json');
+    /* 每天再多留一份日档。以前自动备份永远只覆盖同一个 latest 文件，
+       云端列表里永远只有"1 份自动"，看着像备份很少——其实是历史被盖掉了。 */
+    try {
+      const _d = new Date();
+      const _pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      const _day = 'day-' + _d.getFullYear() + _pad(_d.getMonth() + 1) + _pad(_d.getDate());
+      let _savedDay = '';
+      try { _savedDay = localStorage.getItem('ossAutoDaySaved') || ''; } catch (e) {}
+      if (_savedDay !== _day) {
+        await ossUploadBackupBlob(blob, 'auto/' + _day + '.json');
+        try { localStorage.setItem('ossAutoDaySaved', _day); } catch (e) {}
+      }
+    } catch (e) { /* 日档没传成不影响主备份 */ }
     payload = null; blob = null;
     _ossAutoLastAt = Date.now();
     try { localStorage.setItem('ossAutoBackupAt', String(Date.now())); } catch (e) {}
@@ -1055,7 +1087,7 @@ async function ossRenderBackupList() {
   if (!el) return;
   try { el.innerHTML = '<div class="st-note small">正在看云端备份…</div>'; } catch (e) {}
   let list = [];
-  try { list = await ossListObjects(OSS_BACKUP_PREFIX, 200); }
+  try { list = await ossListAllBackups(); }
   catch (e) {
     try { el.innerHTML = '<div class="st-note small">读不到云端备份：' + escapeHTML(String((e && e.message) || e)) + '</div>'; } catch (e2) {}
     return;

@@ -14,7 +14,7 @@
   <meta name="theme-color" content="#F7F7F5">
 
    
-  <link rel="stylesheet" href="dist/app.v28.1.0.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="dist/app.v28.2.0.css" media="print" onload="this.media='all'">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -436,7 +436,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.1.0.js"></script>
+  <script defer src="dist/app.v28.2.0.js"></script>
   <script defer src="feat_oss.v10.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -666,7 +666,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.1.0.css','dist/app.v28.1.0.js'];
+      var BOOT_FILES = ['dist/app.v28.2.0.css','dist/app.v28.2.0.js'];
 
 
 
@@ -2348,6 +2348,111 @@
     <div class="cal-daypanel" id="calDayPanel"></div>
   </div>
 </section>
+
+<div class="fs-sheet-mask fs-sheet-full" id="calSetMask" hidden>
+  <div class="fs-sheet" role="dialog" aria-modal="true" aria-label="日历设置">
+    <div class="fs-sheet-bar">
+      <div class="fs-sheet-t"><span class="fs-sheet-ti">日历设置</span><span class="fs-sheet-en">CALENDAR</span></div>
+      <button type="button" class="fs-sheet-close" id="calSetClose" aria-label="关闭日历设置">×</button>
+    </div>
+    <div class="fs-sheet-body">
+      <p class="sx-pane-lead">这一页只管那张「日历留言」卡上的三处：<b>附几张字卡</b>、<b>每张尾上挂不挂 emoji</b>、<b>挂不挂颜文字</b>。三处都是全站一份，对每一位 TA 都生效；改完从<b>下一次问候</b>开始照新档走，今天已经送进聊天的那一张不动（它是送达那一刻的快照）。</p>
+      <div class="sx-sec">
+        <div class="sx-lb"><span>卡上附几张字卡</span><i id="calCardSum">5 ~ 10 张</i></div>
+        <div class="sx-duo">
+          <div class="sx-side">
+            <span class="sx-cap">最少</span>
+            <div class="sx-step">
+              <button type="button" class="sx-btn" id="calCardLoCut" aria-label="最少张数减一">−</button>
+              <span class="sx-num" id="calCardLoShow">5</span>
+              <button type="button" class="sx-btn" id="calCardLoAdd" aria-label="最少张数加一">＋</button>
+            </div>
+          </div>
+          <span class="sx-tilde" aria-hidden="true">~</span>
+          <div class="sx-side">
+            <span class="sx-cap">最多</span>
+            <div class="sx-step">
+              <button type="button" class="sx-btn" id="calCardHiCut" aria-label="最多张数减一">−</button>
+              <span class="sx-num" id="calCardHiShow">10</span>
+              <button type="button" class="sx-btn" id="calCardHiAdd" aria-label="最多张数加一">＋</button>
+            </div>
+          </div>
+        </div>
+        <div class="sx-track" aria-hidden="true"><span id="calCardBar"></span></div>
+        <p class="sx-rng">可选 0 ~ 20 张，出厂 5 ~ 10。TA 从你和这位共用的「主字卡」里不重复地抽；池子没有那么多就按能给出来的给。两端都填 0＝卡上只有心情和一句留言。</p>
+      </div>
+       
+      <div class="sx-sec">
+        <div class="sx-lb"><span>这么改之后大概长这样</span><i>现掷 · 不发出去</i></div>
+        <div class="cal-prev-wrap"><div class="message" id="calSetPrev"></div></div>
+        <p class="sx-rng" id="calSetPrevNote"></p>
+      </div>
+      <div class="sx-sec">
+        <div class="sx-lb"><span>每张字卡尾上挂 emoji</span><i id="calEmoSum">60%</i></div>
+        <div class="cal-prob">
+          <div class="sx-step">
+            <button type="button" class="sx-btn" id="calEmoCut" aria-label="emoji 概率减五">−</button>
+            <span class="sx-num" id="calEmoShow">60</span>
+            <button type="button" class="sx-btn" id="calEmoAdd" aria-label="emoji 概率加五">＋</button>
+          </div>
+          <span class="cal-unit">%</span>
+        </div>
+        <div class="sx-track" aria-hidden="true"><span id="calEmoBar"></span></div>
+        <p class="sx-rng">0 ~ 100，一档 5%，出厂 60%。0＝永远不挂，100＝每一张都挂。你和这位的池子里没有「emoji」那一类时，这一档调多少都挂不出东西。</p>
+      </div>
+      <div class="sx-sec">
+        <div class="sx-lb"><span>每张字卡尾上挂颜文字</span><i id="calKaoSum">50%</i></div>
+        <div class="cal-prob">
+          <div class="sx-step">
+            <button type="button" class="sx-btn" id="calKaoCut" aria-label="颜文字概率减五">−</button>
+            <span class="sx-num" id="calKaoShow">50</span>
+            <button type="button" class="sx-btn" id="calKaoAdd" aria-label="颜文字概率加五">＋</button>
+          </div>
+          <span class="cal-unit">%</span>
+        </div>
+        <div class="sx-track" aria-hidden="true"><span id="calKaoBar"></span></div>
+        <p class="sx-rng">0 ~ 100，一档 5%，出厂 50%。它与上面那枚各掷各的：同一张可以两样都挂，也可以两样都不挂。</p>
+      </div>
+       
+      <div class="sx-sec" id="calRemSec">
+        <div class="sx-lb"><span>到点提醒</span><i>行程 · 事件</i></div>
+        <p class="sx-desc">记行程/事件时填了时刻，到点后这位 TA 会来提醒你。两处各管各：<b>前台横幅</b>（页面看得见时挂出来）和<b>系统通知</b>（后台也弹）。备忘不参与；这一页被系统整个关掉时两处都弹不了（与后台听歌同一条边界）。</p>
+        <div class="cal-rem-row">
+          <span class="cal-rem-k">前台横幅<small>页面看得见时挂一条</small></span>
+          <button type="button" class="hub-tg" id="calRemBanner" role="switch" aria-pressed="true" aria-label="前台横幅开关"></button>
+        </div>
+        <div class="cal-rem-row">
+          <span class="cal-rem-k">系统通知<small>切到后台也弹</small></span>
+          <button type="button" class="hub-tg" id="calRemSys" role="switch" aria-pressed="true" aria-label="系统通知开关"></button>
+        </div>
+        <p class="sx-rng" id="calRemPermNote"></p>
+        <button type="button" class="cal-permbtn" id="calRemPermBtn" hidden>现在去批</button>
+        <div class="sx-lb" style="margin-top:14px"><span>提醒的人</span><i>谁来开口</i></div>
+        <div class="contact-chip-row" id="calRemScope">
+          <button type="button" class="contact-chip active" data-cal-remscope="all">全部联系人</button>
+          <button type="button" class="contact-chip" data-cal-remscope="some">部分联系人</button>
+        </div>
+        <div class="contact-chip-row" id="calRemWho" hidden></div>
+        <div class="sx-lb" style="margin-top:14px"><span>TA 的记性</span><i id="calProbSum">80%</i></div>
+        <div class="cal-prob">
+          <div class="sx-step">
+            <button type="button" class="sx-btn" id="calProbCut" aria-label="记性减五">−</button>
+            <span class="sx-num" id="calProbShow">80</span>
+            <button type="button" class="sx-btn" id="calProbAdd" aria-label="记性加五">＋</button>
+          </div>
+          <span class="cal-unit">%</span>
+        </div>
+        <div class="sx-track" aria-hidden="true"><span id="calProbBar"></span></div>
+        <p class="sx-rng">0 ~ 100，一档 5%。到点按它掷一次：掷中＝参与的人里随机一位来提醒你；没掷中＝这一次 TA 忘了，不补。拉到 100＝每一次都提醒。这里调的是<b>没单独设过</b>的条目吃的那套默认——记一笔的表单里每条都能单设时间（时刻 ∶ 时段）、提醒（概率 ∶ 必定 ∶ 不提醒）、谁来和弹窗；条目行上那枚铃铛点亮＝这条不看概率、到点当天内必定补发（重要的事 TA 一定记得）。</p>
+      </div>
+      <div class="sx-sec">
+        <div class="sx-lb">不归这一页调的</div>
+        <p class="sx-desc">TA 今天是什么心情、那一句留言说什么，由二十档心情加权现掷（深夜里「疲惫 ∶ 孤单」会偏多一些），句子各心情一组写死在应用里；这两处不在这里调。卡面吃不吃你自定义的那段气泡 CSS，在 <b>TA 的设置 → 气泡 CSS → 卡片开关</b> 那一档（全站八枚同款开关里的「日历留言」）。</p>
+      </div>
+    </div>
+    <div class="fs-sheet-acts"><button type="button" class="soft-btn" id="calCfgReset">恢复出厂的三处</button></div>
+  </div>
+</div>
 
 <section class="view" id="settingsView">
       <div class="settings-top">
