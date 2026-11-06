@@ -886,6 +886,50 @@ async function ossListAllBackups() {
   return out;
 }
 
+/* 删掉一个对象（清理旧备份用） */
+async function ossDeleteObject(key) {
+  if (!key) return false;
+  const cfg = ossCfgLoad();
+  if (!cfg) return false;
+  const u = _ossV4SignedUrl(cfg, 'DELETE', key, {}, '', 300);
+  try {
+    const res = await fetch(u, { method: 'DELETE' });
+    return !!(res && (res.ok || res.status === 204));
+  } catch (e) { return false; }
+}
+
+/* ── 只留 N 份 ────────────────────────────────────────────────────────────
+ * 自动（backup/auto/…）留 5 份、手动（backup/zika-…）留 5 份，多的从云端删掉。
+ * 以前是「来多少留多少」：每天一份日档＋每次手动一份，云端越攒越多，
+ * 列表一眼望不到底，真要恢复时反而挑不出来。 */
+const OSS_KEEP_AUTO = 5, OSS_KEEP_MANUAL = 5;
+let _ossPruneAt = 0, _ossPruneBusy = false;
+async function ossPruneBackups(force) {
+  if (_ossPruneBusy) return { auto: 0, manual: 0 };
+  if (!force && Date.now() - _ossPruneAt < 6 * 60 * 1000) return { auto: 0, manual: 0 };
+  _ossPruneBusy = true;
+  const del = { auto: 0, manual: 0 };
+  try {
+    const list = await ossListAllBackups();
+    const isAuto = function (k) { return k.indexOf('/auto/') >= 0; };
+    const byLast = function (a, b) { return String(b.last || '').localeCompare(String(a.last || '')); };
+    const groups = [
+      { name: 'auto', keep: OSS_KEEP_AUTO, items: list.filter(function (x) { return isAuto(x.key); }).sort(byLast) },
+      { name: 'manual', keep: OSS_KEEP_MANUAL, items: list.filter(function (x) { return !isAuto(x.key); }).sort(byLast) }
+    ];
+    for (const g of groups) {
+      for (let i = g.keep; i < g.items.length; i++) {
+        const okDel = await ossDeleteObject(g.items[i].key);
+        if (okDel) del[g.name] += 1;
+      }
+    }
+    _ossPruneAt = Date.now();
+  } catch (e) {
+    console.warn('[oss] 清理旧备份失败（不影响这次备份）：', e);
+  } finally { _ossPruneBusy = false; }
+  return del;
+}
+
 /* 把一份备份（Blob）PUT 上 OSS，返回对象键 */
 async function ossUploadBackupBlob(blob, filename) {
   const cfg = ossCfgLoad();
@@ -944,6 +988,8 @@ async function ossBackupNow(silent) {
   /* 手动备份成功后：若这份已小于安全阈值，说明数据已瘦身，自动备份恢复 */
   try { if (upBytes && upBytes < OSS_AUTO_SAFE_BYTES) _ossAutoTooBig = false; } catch (e) {}
   try { localStorage.setItem('ossAutoBackupAt', String(Date.now())); } catch (e) {}
+  /* 只留最近 5 份（手动这一组），多的删掉 */
+  try { await ossPruneBackups(true); } catch (e) {}
   try { ossRenderBackupList(); } catch (e) {}
   if (!silent) { try { showToast('已备份到云端：' + name, 4500); } catch (e) {} }
   return key;
@@ -1050,6 +1096,8 @@ async function _ossAutoRun() {
     payload = null; blob = null;
     _ossAutoLastAt = Date.now();
     try { localStorage.setItem('ossAutoBackupAt', String(Date.now())); } catch (e) {}
+    /* 自动这一组也只留 5 份（内部节流，最多 6 分钟看一次目录） */
+    try { ossPruneBackups(false); } catch (e) {}
   } catch (e) {
     console.warn('[oss] 自动备份没成功：', e);
   } finally { _ossAutoBusy = false; }
@@ -1097,6 +1145,14 @@ async function ossRenderBackupList() {
     return;
   }
   list.sort(function (a, b) { return String(b.last || '').localeCompare(String(a.last || '')); });
+  /* 列表也只显示各 5 份：自动（auto/）5 份、手动（zika-…）5 份，
+     云端就算还有更老的也不铺出来——真要看全量去 OSS 控制台翻。 */
+  const _isAuto = function (x) { return String(x.key).indexOf('/auto/') >= 0; };
+  const _autos = list.filter(function (x) { return _isAuto(x); });
+  const _mans = list.filter(function (x) { return !_isAuto(x); });
+  const _shown = _autos.slice(0, OSS_KEEP_AUTO).concat(_mans.slice(0, OSS_KEEP_MANUAL))
+    .sort(function (a, b) { return String(b.last || '').localeCompare(String(a.last || '')); });
+  list = _shown;
   const rows = [];
   for (const it of list) {
     const t = it.last ? new Date(it.last).toLocaleString('zh-CN') : '时间未知';
@@ -1109,7 +1165,7 @@ async function ossRenderBackupList() {
       + '</div>');
   }
   try {
-    el.innerHTML = '<div class="st-note small"><b>云端备份（' + list.length + ' 份）</b>· 选一份就能恢复到这台设备</div>' + rows.join('');
+    el.innerHTML = '<div class="st-note small"><b>云端备份（自动 ' + Math.min(_autos.length, OSS_KEEP_AUTO) + ' 份 · 手动 ' + Math.min(_mans.length, OSS_KEEP_MANUAL) + ' 份）</b>· 各留最近 5 份，更老的自动清掉 · 选一份就能恢复到这台设备</div>' + rows.join('');
   } catch (e) {}
 }
 
