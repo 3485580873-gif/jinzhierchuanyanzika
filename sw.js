@@ -362,6 +362,11 @@ async function navWithBundle(event) {
    * 以前这种页会一路落进导航账本，之后每次打开都是纯白 —— 而且刷新无用（缓存-first 给的就是它）。
    * 判据只看两样：够不够长、有没有收尾。不合格就当这一发没拿到，走缓存那一份。 */
   if (fresh && !htmlWhole(text)) fresh = null;
+  /* 2026-11-07：导航超时/半页时，别再「这次给旧页就算了」。
+   * github.io 第一包常要 6~12 秒，NAV_TIMEOUT 9 秒一超，这条路径就次次回旧页——
+   * 用户看到的就是「刷了多少次都还是上一版」。这里不阻塞这一发，后台再拉一次；
+   * 只有「版本更新了 且 它引的新包也齐了」才落进导航账本，下一次打开直接就是新页。 */
+  if (!fresh) { try { event.waitUntil(refreshNavQuiet(key, request)); } catch (eQ) {} }
   const cached = (await nav.match(key)) || (await nav.match(navSibling(key))) || (await caches.match(key));
   const ctext = cached ? await cached.clone().text() : '';
 
@@ -415,6 +420,24 @@ async function navWithBundle(event) {
     if (!(await refsGone(crefs))) return cached;
   }
   return fallbackPage();
+}
+
+/* 后台补一次导航页（不参与这一发的响应）：只在「拿到更新的一页并且新包也齐」时落账。 */
+async function refreshNavQuiet(key, request) {
+  try {
+    const r = await fetchTimeout(request, NAV_TIMEOUT + 6000);
+    if (!r || !r.ok) return;
+    const text = await r.clone().text();
+    if (!htmlWhole(text)) return;
+    const nav = await caches.open(NAV_CACHE);
+    const old = (await nav.match(key)) || (await nav.match(navSibling(key)));
+    const otext = old ? await old.clone().text() : '';
+    const fv = htmlVer(text), cv = htmlVer(otext);
+    if (fv && cv && fv <= cv) return;                       /* 线上没更新，不动账本 */
+    const refs = distRefs(text);
+    if (refs.length && !(await codeHas(refs))) return;      /* 新包还没齐，免得下次给空壳 */
+    await navVerSave(nav, key, r.clone(), text);
+  } catch (e) {}
 }
 
 // 只探主包那一件：它 404 就是死页，别的一概不算。
