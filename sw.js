@@ -1,4 +1,5 @@
-// ===== 版本标记 v26.8.36（2026-11-06）：代码件按体积判真伪。
+// ===== 版本标记 v26.8.37（2026-11-06）：代码件并行双源（github.io + jsDelivr）+ 分片按 __CHUNK_OK__ 判整件。
+//   v26.8.36：代码件按体积判真伪。
 //   报障「一直白屏进不去打不开」，机器侧的来由：50KB 那条完整性下限是 2.7MB 单文件时代的尺子，
 //   对现在的 2MB 主包与 900KB 主样式表等于没有——弱网下到 60KB 断线的半件照样落进代码账本；
 //   而 codeCacheFirst 是「命中即返回、绝不重下」（这是故意的，见下），于是这条半件会**永远**是它：
@@ -254,10 +255,11 @@ const META_CACHE = 'ordinal-meta';
 // 每次命中都真量一遍（约 5ms）：不能按 key 记「这件我验过」——账本里的东西会被 put 覆盖，
 // 记过一次就等于给后来的半件发了免检通行证（这就是第一版没修好的原因）。
 async function codeLooksWhole(res, key) {
-  const need = minBytesFor(key);
   try {
-    const n = (await res.clone().blob()).size;
-    return n >= need;
+    const blob = await res.clone().blob();
+    if (blob.size < minBytesFor(key)) return false;
+    if (/\/lazy\.v[^/]+\.js$/.test(key)) return /__CHUNK_OK__/.test(await blob.text());
+    return true;
   } catch (e) { return true; }   // 量不出来就别拦，宁可放行也不要自己造成白屏
 }
 
@@ -532,18 +534,57 @@ async function codeCacheFirst(request) {
       // v26.8.36：命中也要量。半件在这里放过去一次，这台机器就永远白屏（见文件头）。
       if (await codeLooksWhole(cached, key)) return cached;
       try { await code.delete(key); } catch (e) {}
-      
     }
   } catch (e) {}
-  try {
-    const res = await fetch(request);
-    if (res && res.ok) {
-      const t = await res.clone().text();
-      if (t.length >= minBytesFor(key)) { try { code.put(key, res.clone()); } catch (e) {} }
-      return res;
-    }
-  } catch (e) {}
+  let res = null;
+  try { res = await fetchFast(request, key); } catch (e) { res = null; }
+  if (res && res.ok) {
+    const t = await res.clone().text();
+    if (wholeEnough(t, key)) { try { code.put(key, res.clone()); } catch (e) {} }
+    return res;
+  }
   return new Response('Offline', { status: 503 });
+}
+
+/* v26.8.37：同源和镜像**同时发**，谁先拿到整件就用谁。
+ * 线上实测（2026-11-06）：同一个 2MB 主包，github.io 149 秒 / jsDelivr 10 秒；
+ * 播放器分片 309KB，github.io 弱网下根本过不了 45 秒那道坎。
+ * 以前镜像只是页面侧的第三路兜底，而且要等两发各 45 秒才轮到它（90 秒）。
+ * 放在 SW 这一层并行，弱网下第一条路就能走通。
+ * 只对 github.io 生效；本地/自定义域名一律返回空，走原来那一发。 */
+function mirrorUrl(key) {
+  try {
+    if (!/\.github\.io$/i.test(location.hostname)) return '';
+    const u = new URL(key);
+    const user = u.hostname.split('.')[0];
+    const seg = u.pathname.split('/').filter(Boolean);   // 用户站的路径只有一段（/仓库/），
+    const repo = seg[0] || '';                            // 不能像以前那样硬要两段
+    if (!user || !repo) return '';
+    const rest = seg.slice(1).join('/');
+    if (!rest) return '';
+    return 'https://cdn.jsdelivr.net/gh/' + user + '/' + repo + '@main/' + rest;
+  } catch (e) { return ''; }
+}
+function fetchFast(request, key) {
+  const p1 = fetch(request);
+  const m = mirrorUrl(key);
+  if (!m) return p1;
+  if (typeof Promise.any !== 'function') return p1;   // 老 Safari（<14）没有 any，别为了兜底把主路搭进去
+  const good = (p) => p.then((r) => {
+    if (!r || !r.ok) throw new Error('bad');
+    const ct = r.headers.get('content-type') || '';
+    if (/text\/html/i.test(ct)) throw new Error('html');   // 镜像出错时回的是错误页，不能当代码用
+    return r;
+  });
+  return Promise.any([good(p1), good(fetch(m, { mode: 'cors' }))]).catch(() => null);
+}
+
+/* 整件判定：分片结尾自带 (window.__CHUNK_OK__=...)[id]=true，
+ * 一截断就没有它 —— 比单看体积准得多（小分片解压后才 17KB，体积下限没法给）。 */
+function wholeEnough(t, key) {
+  if (!t || t.length < minBytesFor(key)) return false;
+  if (/\/lazy\.v[^/]+\.js$/.test(key)) return /__CHUNK_OK__/.test(t);
+  return true;
 }
 
 /* v26.8.36：页面亲口说「我拿回来这一件是坏的」时，别等它自己对不上——直接删。

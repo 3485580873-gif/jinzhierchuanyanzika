@@ -36,6 +36,32 @@
   <script defer src="feat_oss.v10.js"></script>
   <script defer src="feat_input.v1.js"></script>
   <script defer src="feat_perf.v2.js"></script>
+  <!-- v26.8.37：镜像兜底从来没生效过。主包 _chunkMirror 里那条正则要两段路径（user/repo/），
+       而用户站是 3485580873-gif.github.io/jinzhierchuanyanzika/ —— 路径只有一段，于是恒返回空串，
+       指针永远走不到 jsDelivr。播放器那一件 309KB，github.io 弱网下过不去时，这条是唯一还能走的路。
+       主包 2MB 不重发（弱网重下代价太大），这里在主包执行完之后把那个函数换掉。 -->
+  <script>
+  (function(){
+    function fix(){
+      try{
+        if (typeof window._chunkMirror !== 'function') return;
+        window._chunkMirror = function(url){
+          try{
+            if(!/\.github\.io$/i.test(location.hostname)) return '';
+            var user = location.hostname.split('.')[0];
+            var seg = location.pathname.split('/').filter(function(x){ return x; });
+            var repo = seg[0] || '';
+            if(!user || !repo) return '';
+            return 'https://cdn.jsdelivr.net/gh/'+user+'/'+repo+'@main/'+String(url).replace(/^\.?\//,'');
+          }catch(e){ return ''; }
+        };
+      }catch(e){}
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fix, {once:true});
+    else fix();
+    setTimeout(fix, 1500);
+  })();
+  </script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
 
