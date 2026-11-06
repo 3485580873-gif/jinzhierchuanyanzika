@@ -14,13 +14,24 @@
   <meta name="theme-color" content="#F7F7F5">
 
    
+  <!-- v26.8.35：结构先立住。主样式表 881KB（gzip 175KB）是异步来的，
+       它没到之前一条 .view 规则都不生效 —— 45 个页面会全部竖着堆出来（文档高近四万像素），
+       点哪一页都是「顶栏变了、屏上还是上一页」，看起来就是打不开。
+       下面这几行只做一件事：一次只显示一页。主样式表到货后由它覆盖。 -->
+  <style id="criticalCss">
+    html,body{margin:0;-webkit-text-size-adjust:100%}
+    body{background:#F7F7F5;color:#2f3136}
+    .view{display:none;flex:1;overflow:auto;overflow-x:hidden;overflow-x:clip;
+      contain:layout style paint;overscroll-behavior:contain}
+    .view.active{display:flex;flex-direction:column}
+  </style>
   <link rel="stylesheet" href="dist/app.v26.8.29.css" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="feat_ui.v5.css">
   <link rel="stylesheet" href="feat_glass.v2.css">
   <link rel="stylesheet" href="feat_perf.v1.css">
   <link rel="stylesheet" href="feat_v27.v3.css">
   <script defer src="feat_oss_boot.v4.js"></script>
-  <script defer src="dist/app.v26.8.34.js"></script>
+  <script defer src="dist/app.v26.8.35.js"></script>
   <script defer src="feat_v27_bridge.v1.js"></script>
   <script defer src="feat_oss.v10.js"></script>
   <script defer src="feat_input.v1.js"></script>
@@ -260,7 +271,7 @@
 
 
 
-      var BOOT_FILES = ["dist/app.v26.8.29.css","dist/app.v26.8.34.js"];
+      var BOOT_FILES = ["dist/app.v26.8.29.css","dist/app.v26.8.35.js"];
 
 
 
