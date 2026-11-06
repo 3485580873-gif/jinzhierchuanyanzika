@@ -13568,6 +13568,13 @@ function _coCardEl(m, miniPartner, miniMine) {
       img.src = src; img.alt = '';
       /* 图打不开（签名过期／还没连上云端）就退回首字，不要留一块白 */
       img.onerror = function () { try { this.remove(); } catch (e) {} i.textContent = initial; };
+      /* 云端没连上时，oss:// 会被换成 48×48 的「云图」占位图——那不算头像，
+         加载完发现尺寸不对就换回首字，别在小圆头像里显示一块灰。 */
+      img.onload = function () {
+        try {
+          if (this.naturalWidth <= 48 && this.naturalHeight <= 48) { this.remove(); i.textContent = initial; }
+        } catch (e) {}
+      };
       i.appendChild(img);
     }
     else i.textContent = initial;
@@ -66116,7 +66123,9 @@ function _plAvStackHTML(mine, mineName, other, otherName, ghost) {
     /* 图打不开（云端签名过期／还没连上云端）就退回名字首字，别留一块白底 */
     const ini = escapeHTML(String(nm || '我').trim().slice(0, 1) || '我');
     return '<i class="pl-av">' + (src
-      ? '<img src="' + escapeHTML(src) + '" alt="" data-fb="' + ini + '" onerror="var p=this.parentNode;this.remove();if(p){p.textContent=this.getAttribute(\'data-fb\')||\'\'}">'
+      ? '<img src="' + escapeHTML(src) + '" alt="" data-fb="' + ini + '"'
+        + ' onerror="var p=this.parentNode;this.remove();if(p){p.textContent=this.getAttribute(\'data-fb\')||\'\'}"'
+        + ' onload="if(this.naturalWidth<=48&&this.naturalHeight<=48){var p=this.parentNode;this.remove();if(p){p.textContent=this.getAttribute(\'data-fb\')||\'\'}}">'
       : ini) + '</i>';
   };
    
@@ -66682,7 +66691,9 @@ function plInvitePick() {
       const nm = fixedNameOf(c) || c.name || c.id;
       const msgs = (data.chats[c.id] || {}).msgs || [];
       const _fb = escapeHTML(String(nm).trim().slice(0, 1) || '?');
-      const av = c.avatar ? '<img src="' + escapeHTML(c.avatar) + '" alt="" data-fb="' + _fb + '" onerror="var p=this.parentNode;this.remove();if(p){p.textContent=this.getAttribute(\'data-fb\')||\'\'}">' : _fb;
+      const av = c.avatar ? '<img src="' + escapeHTML(c.avatar) + '" alt="" data-fb="' + _fb + '"'
+        + ' onerror="var p=this.parentNode;this.remove();if(p){p.textContent=this.getAttribute(\'data-fb\')||\'\'}"'
+        + ' onload="if(this.naturalWidth<=48&&this.naturalHeight<=48){var p=this.parentNode;this.remove();if(p){p.textContent=this.getAttribute(\'data-fb\')||\'\'}}">' : _fb;
       return '<button type="button" class="pl-inv-row" data-pl-invto="' + escapeHTML(c.id) + '">' +
         '<span class="pl-inv-av">' + av + '</span>' +
         '<span class="pl-tx"><b>' + escapeHTML(nm) + '</b><small>' +
