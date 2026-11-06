@@ -1,4 +1,4 @@
-// ===== 版本标记 v26.8.32（2026-11-06）：分片 script 改 async（以前排队执行，一片没落地后面全干等）。
+// ===== 版本标记 v26.8.34（2026-11-06）：分片加载兜底。耐心 45s；失败先删 SW 里那份坏缓存再同地址重试；最后走公共镜像；分片迟到也会自动进入（不再把「还没下完」当成失败）。预取跳过播放器/助眠两个大件、并发 5→2。新增 PURGE_CODE 消息。
 // #545（换版后首访「加载不全」）：缓存账本一律**不带版号**。
 //   旧代三个名字是 ordinal-v<ver>-static∶-data，每次 bump 就是两个新账本，activate 再把旧的两本全删掉
 //   ＝**每换一次版本，缓存里那 3MB 代码件必然清零**；而入口引的两件又是内容寻址的新名字（也必然 miss）。
@@ -508,6 +508,22 @@ self.addEventListener('message', (e) => {
 // 首屏 JS 分片（dist/lazy.v<ver>.<组>.js）：页面 load 之后才由 js/sw-register.js 发一发 LAZY_PREFETCH，
 // 把这一版那几片补进代码账本——离线第一次进那些页也打得开。刻意不放进 install：安装期正是首屏最难的时候，
 // 那时去拉分片就是与入口自己抢同一条弱网带宽（#474 二批那条铁律同一课）。
+/* v26.8.34：页面说「这一件我拿回来是坏的」时，把它从代码账本里删掉。
+ * 背景：codeCacheFirst 命中就返回，不看长度。上一次下到一半断掉的那半件一旦落盘，
+ * 同地址永远拿回来还是它 —— 脚本跑不出 __CHUNK_OK__，那一页就**永远**打不开。
+ * 页面侧在第一次失败后发这条消息，再用同一地址重试。 */
+self.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (d.type !== 'PURGE_CODE' || !d.url) return;
+  const run = async () => {
+    try {
+      const code = await caches.open(CODE_CACHE);
+      await code.delete(canon(new URL(d.url, self.registration.scope).href));
+    } catch (x) {}
+  };
+  try { e.waitUntil(run()); } catch (x) { run(); }
+});
+
 self.addEventListener('message', (e) => {
   const d = e.data || {};
   if (d.type !== 'LAZY_PREFETCH') return;
@@ -520,7 +536,11 @@ self.addEventListener('message', (e) => {
     const code = await caches.open(CODE_CACHE);
     /* v26.8.30：原来是一片一片 await，17 个分片在弱网下排成一条长队（每片 2~5 秒＝一分钟起）。
      * 改成 5 路并发：一片慢不拖住后面，整体从「分钟级」压到「十几秒」。 */
-    const jobs = list.filter((f) => /\.js$/.test(f));
+    /* v26.8.34：预取本来是"离线也打得开"，但它一开跑就是 17 个文件、1.4MB 全下，
+     * 弱网下正好和用户点的那一页抢同一条带宽 —— 播放器 302KB、助眠 247KB 这两件
+     * 是大头（占一半），Skip 掉它们，剩下的才是"小页秒开"的收益。
+     * 并发也从 5 降到 2：抢得太狠，用户点的那一发就排不上。 */
+    const jobs = list.filter((f) => /\.js$/.test(f)).filter((f) => !/\.(player|sleeproom)\.js$/.test(f));
     let cursor = 0;
     const worker = async () => {
       while (cursor < jobs.length) {
@@ -531,7 +551,7 @@ self.addEventListener('message', (e) => {
         try { await code.add(new Request(key, { cache: 'reload' })); } catch (x) {}
       }
     };
-    await Promise.all([worker(), worker(), worker(), worker(), worker()]);
+    await Promise.all([worker(), worker()]);
   };
   try { e.waitUntil(run()); } catch (x) { run(); }
 });
