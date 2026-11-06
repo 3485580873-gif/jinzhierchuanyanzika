@@ -1,4 +1,4 @@
-// ===== 版本标记 v26.8.29（2026-11-06）：修引用回复把气泡撑到和引用一样长（align-items:stretch → 按各自宽度）。样式与主包换名，内容寻址绕缓存。
+// ===== 版本标记 v26.8.30（2026-11-06）：修「更多里的功能打不开」。sweepCode 以前把 app 和 lazy 一起按版本号分代、只留两代，而在用的分片名字带的是它出生那一代的号（v26.5.6.cards / v27.7.5.divine 分属六代）→ 每开一次页面就被删一批，预热永远白干。现在只清主包，分片留着；预热改 5 路并发。
 // #545（换版后首访「加载不全」）：缓存账本一律**不带版号**。
 //   旧代三个名字是 ordinal-v<ver>-static∶-data，每次 bump 就是两个新账本，activate 再把旧的两本全删掉
 //   ＝**每换一次版本，缓存里那 3MB 代码件必然清零**；而入口引的两件又是内容寻址的新名字（也必然 miss）。
@@ -147,12 +147,19 @@ async function sweepCode() {
     const reqs = await code.keys();
     const gens = {};
     for (const rq of reqs) {
-      const m = /(?:app|lazy)\.(v[0-9.]+)\.(?:[a-z0-9-]+\.)?(css|js)$/.exec(rq.url);
+      /* v26.8.30：这里以前是 /(?:app|lazy)\.(v[0-9.]+)\./——把 app 和 lazy 一起按版本号分代，
+       * 只留最近两代。问题是 lazy 分片的名字带的是**它出生那一代**的号：
+       * 当前这一版在用的是 lazy.v26.5.6.cards.js、lazy.v26.6.2.player.js、lazy.v27.7.5.divine.js，
+       * 它们分属六个「代」，每开一次页面就被当成旧代删掉一批，
+       * 下次进那一页又得重下 —— 预热永远是白干，弱网下就是「点了打不开」。
+       * 现在只按代清主包（app.*，单件 2MB，才是真正该省的），分片一律留着：
+       * 35 个分片加起来才 1.4MB，删了省不了多少，删错一次就是整页打不开。 */
+      const m = /(?:^|\/)app\.(v[0-9.]+)\.(?:[a-z0-9-]+\.)?(css|js)$/.exec(rq.url);
       if (!m) continue;
       (gens[m[1]] = gens[m[1]] || []).push(rq);
     }
     const names = Object.keys(gens).sort(verDesc);
-    for (const n of names.slice(2)) for (const rq of gens[n]) { try { await code.delete(rq); } catch (e) {} }
+    for (const n of names.slice(3)) for (const rq of gens[n]) { try { await code.delete(rq); } catch (e) {} }
   } catch (e) {}
 }
 function verDesc(a, b) { return verNum(b) - verNum(a); }
@@ -511,13 +518,20 @@ self.addEventListener('message', (e) => {
     const list = (am && Array.isArray(am.lazy)) ? am.lazy : [];
     if (!list.length) return;
     const code = await caches.open(CODE_CACHE);
-    for (const f of list) {
-      if (!/\.js$/.test(f)) continue;
-      let key = '';
-      try { key = canon(base + f); } catch (x) { continue; }
-      try { if (await code.match(key)) continue; } catch (x) {}
-      try { await code.add(new Request(key, { cache: 'reload' })); } catch (x) {}
-    }
+    /* v26.8.30：原来是一片一片 await，17 个分片在弱网下排成一条长队（每片 2~5 秒＝一分钟起）。
+     * 改成 5 路并发：一片慢不拖住后面，整体从「分钟级」压到「十几秒」。 */
+    const jobs = list.filter((f) => /\.js$/.test(f));
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < jobs.length) {
+        const f = jobs[cursor++];
+        let key = '';
+        try { key = canon(base + f); } catch (x) { continue; }
+        try { if (await code.match(key)) continue; } catch (x) {}
+        try { await code.add(new Request(key, { cache: 'reload' })); } catch (x) {}
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker(), worker()]);
   };
   try { e.waitUntil(run()); } catch (x) { run(); }
 });
