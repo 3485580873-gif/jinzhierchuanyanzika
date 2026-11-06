@@ -500,7 +500,12 @@ function chatMyName(cid) {
 }
 function chatMyAvatar(cid) {
   const c = chatMyRowOf(cid);
-  if (c) return (typeof c.myChatAvatar === 'string' && c.myChatAvatar) || '';
+  /* 这一位单独设过就用他的；没设过（空串）就回到全局头像——
+     以前没设过会返回空，一起听卡、播放器那两枚小圆就只剩首字。 */
+  if (c) {
+    const own = (typeof c.myChatAvatar === 'string' && c.myChatAvatar) || '';
+    if (own) return own;
+  }
   return (data.me && data.me.avatar) || '';
 }
 
