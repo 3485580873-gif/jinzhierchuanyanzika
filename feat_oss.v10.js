@@ -407,6 +407,32 @@ function ossIsImgAddr(v) {
 /* 把「oss:// → 签名直链」的解析器交给 boot 里装好的 img.src 钩子。
  * 没有这一步，凡是 img.src = 云端引用的地方（一起听卡片头像、动态生成的
  * 各种小图）都会先被浏览器判成坏地址、再被 onerror 删掉。 */
+/* 签名过期自愈：气泡头像、头像库、朋友圈里那些「存成 https://…aliyuncs.com/…?Signature=…」
+ * 的老地址，过期后一律 403 → onerror 把 <img> 删掉 → 一片空白。
+ * 这里在捕获阶段接住图片加载失败：把 URL 反解回 oss:// 引用，重新签一次再赋回去。
+ * 只重试一次，失败就交给调用方的占位逻辑，绝不无限循环。 */
+try {
+  document.addEventListener('error', function (e) {
+    var el = e && e.target;
+    if (!el || el.tagName !== 'IMG') return;
+    if (el.__ossResign) return;
+    var u = '';
+    try { u = el.currentSrc || el.getAttribute('src') || ''; } catch (e1) { u = ''; }
+    if (!u || u.indexOf('.aliyuncs.com/') < 0) return;
+    var key = '';
+    try { key = ossKeyFromUrl(u); } catch (e2) { key = ''; }
+    if (!key) return;
+    el.__ossResign = 1;
+    var nv = '';
+    try { nv = ossDisplayUrl(OSS_SCHEME + key); } catch (e3) { nv = ''; }
+    if (!nv || nv === u) return;
+    try {
+      el.setAttribute('data-oss-ref', OSS_SCHEME + key);
+      el.setAttribute('src', nv);
+    } catch (e4) {}
+  }, true);
+} catch (e) {}
+
 try {
   window.__IMG_RESOLVE = function (v) {
     if (typeof v !== 'string' || v.indexOf(OSS_SCHEME) !== 0) return { url: v, ref: '' };
@@ -774,7 +800,7 @@ async function ossMigrateAll(onProg) {
   const st = document.createElement('style');
   st.id = 'oss-form-style';
   st.textContent = '.oss-form{display:flex;flex-direction:column;gap:8px;padding:4px 0 8px}'
-    + '.oss-in{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font-size:13px;outline:none}'
+    + '.oss-in{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font-size:inherit;line-height:1.45;outline:none}'
     + '.oss-in:focus{border-color:var(--accent,#6aa9ff)}';
   document.head.appendChild(st);
 })();
