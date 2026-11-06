@@ -18,6 +18,13 @@
   var MINE_VER = 'v1.0.0';
   var MINE_LOG = function () { try { console.log.apply(console, ['[mine]'].concat([].slice.call(arguments))); } catch (e) {} };
 
+  /* 原站的 stNote() 会把整段转义，于是文案里的 <b> 加粗会原样显示成「<b>…</b>」。
+   * 面板文案全是我们自己写死的，带变量的那一处已经 escapeHTML 过了，
+   * 所以在这里遮蔽一份认 HTML 的版本，只影响本文件内的调用。 */
+  var stNote = function (txt, small) {
+    return '<div class="st-note' + (small ? ' small' : '') + '">' + String(txt == null ? '' : txt) + '</div>';
+  };
+
 /* ============================================================================
  * 第 1 部分：云端图库核心（照搬原版，OSS V4 签名 + 上传 + 迁移 + 复活）
  * ========================================================================== */
@@ -1431,12 +1438,9 @@ function cloudRender() {
       + '<br>上次自动备份：' + escapeHTML(_lastTxt) + '　·　备份文件不含 OSS 密钥</div>');
     p.push(stNote('想立刻存档就点「立刻手动存一份」；想把云端那份拉回来看，点「从云端恢复」。', true));
     p.push('<div id="ossBackupList"></div>');
-    /* ── 本机保险箱：清洗前的原始存档 ──
-       v26 的清洗逻辑会「只认 data:image」，云端引用 oss:// 会被当坏数据删掉。
-       就算哪天又碰上这种坑，这里也留着一份没被洗过的原件。 */
-    p.push('<div class="st-hero" style="margin-top:14px;"><b>本机保险箱</b><span>每次启动、数据有变化时先把原始存档原样留一份（含 oss:// 引用）。万一以后哪个版本又误删了图，从这里把引用捞回来</span></div>');
-    p.push('<div class="st-foot"><button type="button" class="soft-btn" data-st-act="oss-vault">导出最新一份原始存档</button></div>');
-    p.push('<div class="st-note small" id="vaultInfo">正在读…</div>');
+    /* v22 基线不提供「本机保险箱」（那套是 v26 启动脚本里的，靠读主库整树做快照；
+       这里的整树是剥空形态，快照拿不到消息，留着只会显示「没启用」）。
+       后悔药改由上面的「云端数据备份」承担：backup/ 前缀里保留着历史快照。 */
     /* 配置存在哪：出问题时一眼看出是"没存上"还是"读不出来" */
     try {
       const _w = [];
