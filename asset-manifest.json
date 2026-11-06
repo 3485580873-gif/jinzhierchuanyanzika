@@ -1,8 +1,8 @@
 {
-  "ver": "v26.8.30",
+  "ver": "v26.8.31",
   "files": [
     "dist/app.v26.8.29.css",
-    "dist/app.v26.8.30.js"
+    "dist/app.v26.8.31.js"
   ],
   "lazy": [
     "dist/lazy.v26.5.8.call.js",
@@ -21,6 +21,6 @@
     "dist/lazy.v27.7.5.sleeproom.js",
     "dist/lazy.v27.7.5.cjian.js",
     "dist/lazy.v26.5.9.deal.js",
-    "dist/lazy.v26.8.30.update.js"
+    "dist/lazy.v26.8.31.update.js"
   ]
 }
