@@ -13,6 +13,347 @@
   <meta name="color-scheme" content="only light">
   <meta name="theme-color" content="#F7F7F5">
 
+  <!-- v26.8.38 长任务记录器：常开，拿真机现场用。连点屏幕 7 下或网址加 ?diag=1 查看。
+       放在 head 内联而不是外挂 js，是因为要早于主包执行才有意义；
+       另外 SW 对 .js 有 40KB 完整性下限，这个只有 12KB，外挂会被反复判成半件重下。 -->
+  <script>
+/* v26.8.38 长任务记录器
+ *
+ * 目的：抓住「刚打开聊几句，整个站卡一两分钟」的现场。
+ * 沙箱里复现不出来（CPU 降速 4 倍、两万条消息，打字仍 3ms），所以只能在真机上取证。
+ *
+ * 采集四路，全部是浏览器原生 observer，常开开销在微秒级：
+ *   lt   单个长任务 ≥200ms，带 attribution（哪段脚本触发的）
+ *   rs   单个资源 ≥2.5s（图片走 OSS，卡住会在这里现形）
+ *   fps  整秒掉帧 <18 帧（没有单个长任务、但整体发滞的情况）
+ *   err  运行时错误与未捕获的 Promise 异常
+ * 外加一条 nav，记首屏各阶段耗时与主包下载耗时/体积。
+ *
+ * 落盘：localStorage['ordinal-diag-log']，环形 150 条。
+ *   ≥1.2 秒的卡顿立刻写（防闪退丢现场），其余最迟 4 秒一批。
+ * 查看：连点屏幕 7 下（1.5 秒内），或网址后加 ?diag=1。
+ */
+(function () {
+  "use strict";
+  if (window.__DIAG_ON__) return;
+  window.__DIAG_ON__ = 1;
+
+  var KEY = "ordinal-diag-log";
+  var MAX = 150;
+  var buf = [];
+  var dirty = 0;
+  var flushT = 0;
+  var lastFps = 0;
+  var raf = window.requestAnimationFrame
+    ? function (f) { return window.requestAnimationFrame(f); }
+    : function (f) { return setTimeout(function () { f(performance.now()); }, 16); };
+
+  function av() {
+    try {
+      var v = document.querySelector(".view.active");
+      return v ? String(v.id || "").replace(/View$/, "") : "";
+    } catch (e) { return ""; }
+  }
+
+  function en() {
+    var m = 0;
+    try { if (performance.memory) m = Math.round(performance.memory.usedJSHeapSize / 1048576); } catch (e) {}
+    var n = 0, i = 0;
+    try { n = document.getElementsByTagName("*").length; i = document.images.length; } catch (e) {}
+    return { v: av(), n: n, i: i, m: m };
+  }
+
+  function flush() {
+    if (!dirty) return;
+    dirty = 0;
+    try { localStorage.setItem(KEY, JSON.stringify(buf)); } catch (e) {}
+  }
+
+  function sched() {
+    if (flushT) return;
+    flushT = setTimeout(function () { flushT = 0; flush(); }, 4000);
+  }
+
+  function push(o) {
+    o.t = Date.now();
+    o.s = Math.round(performance.now());
+    o.e = en();
+    buf.push(o);
+    while (buf.length > MAX) buf.shift();
+    dirty = 1;
+    if (o.d >= 1200) flush(); else sched();
+  }
+  window.__DIAG_PUSH__ = push;
+
+  /* ---- 1. 长任务 ---- */
+  try {
+    new PerformanceObserver(function (l) {
+      var a = l.getEntries();
+      for (var j = 0; j < a.length; j++) {
+        var e = a[j];
+        if (e.duration < 200) continue;
+        var at = (e.attribution && e.attribution[0]) || {};
+        push({
+          k: "lt",
+          d: Math.round(e.duration),
+          c: at.containerType || "",
+          x: String(at.containerSrc || "").replace(/^https?:\/\/[^/]+/, "").slice(-42),
+          nm: at.name || ""
+        });
+      }
+    }).observe({ type: "longtask", buffered: true });
+  } catch (e) {}
+
+  /* ---- 2. 慢资源 ---- */
+  try {
+    new PerformanceObserver(function (l) {
+      var a = l.getEntries();
+      for (var j = 0; j < a.length; j++) {
+        var e = a[j];
+        if (e.duration < 2500) continue;
+        push({
+          k: "rs",
+          d: Math.round(e.duration),
+          z: Math.round((e.transferSize || 0) / 1024),
+          u: String(e.name).replace(/^https?:\/\/[^/]+/, "").slice(0, 56),
+          ty: e.initiatorType || ""
+        });
+      }
+    }).observe({ type: "resource", buffered: true });
+  } catch (e) {}
+
+  /* ---- 3. 整秒掉帧 ---- */
+  function fpsTick() {
+    if (document.hidden) { setTimeout(fpsTick, 3000); return; }
+    var st = performance.now(), f = 0;
+    function loop() {
+      f++;
+      if (performance.now() - st < 1000) { raf(loop); return; }
+      var nw = Date.now();
+      if (f < 18 && nw - lastFps > 10000) { lastFps = nw; push({ k: "fps", d: 0, f: f }); }
+      setTimeout(fpsTick, 2500);
+    }
+    raf(loop);
+  }
+  setTimeout(fpsTick, 3000);   /* 前 3 秒不采样，别抢首屏 */
+
+  /* ---- 3.5 心跳兜底 ----
+   * longtask 不是到处都有：headless、部分 WebView、某些省电模式都不上报。
+   * 这里每 200ms 打一次表，两次之间的空档就是主线程被占住的时长。
+   * 没有 attribution，但「到底卡没卡、卡了多久、卡在哪一页」一定拿得到。
+   * 和 lt 记录同时出现时，说明确实是 JS 在占主线程；只有 hb 没有 lt，
+   * 说明卡在渲染或网络，不在脚本。 */
+  (function () {
+    var hb = performance.now();
+    setInterval(function () {
+      var n = performance.now();
+      var gap = Math.round(n - hb - 200);
+      hb = n;
+      if (document.hidden) return;          /* 后台被浏览器节流，不算卡 */
+      if (gap < 400) return;
+      var last = buf.length ? buf[buf.length - 1] : null;
+      if (last && last.k === "lt" && Math.abs(last.d - gap) < 600) return;  /* 同一件事不记两遍 */
+      push({ k: "hb", d: gap });
+    }, 200);
+  })();
+
+  /* ---- 4. 错误 ---- */
+  window.addEventListener("error", function (e) {
+    push({
+      k: "err", d: 0,
+      m: String((e && e.message) || "").slice(0, 70),
+      u: String((e && e.filename) || "").replace(/^https?:\/\/[^/]+/, "").slice(-34),
+      l: (e && e.lineno) || 0
+    });
+  }, true);
+  window.addEventListener("unhandledrejection", function (e) {
+    var r = e && e.reason;
+    push({ k: "rej", d: 0, m: String((r && r.message) || r || "").slice(0, 70) });
+  });
+
+  /* ---- 5. 首屏各阶段 ---- */
+  function navRec() {
+    try {
+      var n = (performance.getEntriesByType("navigation") || [])[0];
+      var rs = performance.getEntriesByType("resource") || [];
+      var ap = 0, apz = 0, apn = "";
+      for (var j = 0; j < rs.length; j++) {
+        if (/app\.v[0-9.]+\.js/.test(rs[j].name)) {
+          ap = Math.round(rs[j].duration);
+          apz = Math.round((rs[j].transferSize || 0) / 1024);
+          apn = String(rs[j].name).replace(/^https?:\/\/[^/]+/, "");
+        }
+      }
+      push({
+        k: "nav", d: 0,
+        ttfb: n ? Math.round(n.responseStart) : 0,
+        dcl: n ? Math.round(n.domContentLoadedEventEnd) : 0,
+        ld: n ? Math.round(n.loadEventEnd) : 0,
+        ap: ap, apz: apz, an: apn,
+        tr: n ? Math.round((n.transferSize || 0) / 1024) : 0
+      });
+    } catch (e) {}
+  }
+  window.addEventListener("load", function () { setTimeout(navRec, 1500); });
+
+  /* ---- 落盘时机 ---- */
+  document.addEventListener("visibilitychange", function () { if (document.hidden) flush(); });
+  window.addEventListener("pagehide", flush);
+  setTimeout(function () { setInterval(flush, 12000); }, 20000);
+
+  /* ---- 查看面板 ---- */
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function fmt(o) {
+    var d = new Date(o.t);
+    var head = pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds()) + "  ";
+    var kind = o.k === "lt" ? "卡顿" : o.k === "hb" ? "停顿" : o.k === "rs" ? "慢载" : o.k === "fps" ? "掉帧"
+      : o.k === "err" ? "错误" : o.k === "rej" ? "异常" : "启动";
+    var body;
+    if (o.k === "lt") body = o.d + "ms(脚本)" + (o.c ? "  " + o.c + (o.x ? ":" + o.x : "") : "");
+    else if (o.k === "hb") body = o.d + "ms(主线程占住)";
+    else if (o.k === "rs") body = o.d + "ms  " + o.z + "KB  " + o.u;
+    else if (o.k === "fps") body = o.f + " 帧/秒";
+    else if (o.k === "err" || o.k === "rej") body = o.m + (o.u ? "  @" + o.u + ":" + o.l : "");
+    else body = "TTFB " + o.ttfb + "ms · DCL " + o.dcl + "ms · load " + o.ld + "ms · "
+      + (o.an ? String(o.an).replace(/^\/?dist\//, "") : "主包") + " " + o.ap + "ms/" + o.apz
+      + "KB · 本页 " + o.tr + "KB";
+    var e = o.e || {};
+    return head + kind + "  " + body + "   [" + (e.v || "-") + " n=" + (e.n || 0) + " 内存" + (e.m || 0) + "MB]";
+  }
+
+  function collect() {
+    var hist = [];
+    try { hist = JSON.parse(localStorage.getItem(KEY) || "[]") || []; } catch (e) { hist = []; }
+    var seen = {}, all = [];
+    var merged = buf.concat(hist);
+    for (var j = 0; j < merged.length; j++) {
+      var o = merged[j];
+      if (!o || typeof o.t !== "number") continue;
+      var k = o.t + "|" + o.k + "|" + (o.d || 0);
+      if (seen[k]) continue;
+      seen[k] = 1;
+      all.push(o);
+    }
+    all.sort(function (a, b) { return (b.d || 0) - (a.d || 0); });
+    return all;
+  }
+
+  function panel() {
+    if (document.getElementById("diagPanel")) return;
+    var all = collect();
+    var lines = [];
+    for (var j = 0; j < all.length && j < 70; j++) lines.push(fmt(all[j]));
+    var lt = all.filter(function (o) { return o.k === "lt"; });
+    var mx = lt.length ? Math.max.apply(null, lt.map(function (o) { return o.d; })) : 0;
+
+    var box = document.createElement("div");
+    box.id = "diagPanel";
+    box.setAttribute("style",
+      "position:fixed;inset:0;z-index:2147483647;background:#0b0b0d;color:#d7d7de;" +
+      "font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;display:flex;flex-direction:column;" +
+      "-webkit-overflow-scrolling:touch");
+
+    var hd = document.createElement("div");
+    hd.setAttribute("style",
+      "padding:14px 14px 10px;border-bottom:1px solid #24242c;flex:none");
+    var ua = "";
+    try { ua = String(navigator.userAgent).replace(/\(.*?\)/, "").slice(0, 64); } catch (e) {}
+    hd.innerHTML = '<div style="font-size:14px;color:#fff;letter-spacing:.5px">长任务记录</div>'
+      + '<div style="margin-top:5px;color:#8a8a99">共 ' + all.length + ' 条 · 最长卡顿 '
+      + (mx ? mx + "ms" : "无") + ' · 上限 ' + MAX + ' 条</div>'
+      + '<div style="margin-top:4px;color:#5c5c6b;font-size:11px;word-break:break-all">' + ua + '</div>';
+
+    var pre = document.createElement("div");
+    pre.setAttribute("style",
+      "flex:1;overflow:auto;padding:10px 14px;white-space:pre-wrap;word-break:break-all;" +
+      "color:#c9c9d4;-webkit-overflow-scrolling:touch");
+    pre.textContent = lines.length ? lines.join("\n")
+      : "还没有记录。\n\n正常用一会儿（尤其是你觉得卡的时候），再回来点这里。";
+
+    var ft = document.createElement("div");
+    ft.setAttribute("style",
+      "flex:none;display:flex;gap:8px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));" +
+      "border-top:1px solid #24242c");
+
+    function mkBtn(label, color, fn) {
+      var b = document.createElement("button");
+      b.textContent = label;
+      b.setAttribute("style",
+        "flex:1;padding:11px 0;border-radius:10px;border:1px solid " + color +
+        ";background:transparent;color:" + color + ";font:13px ui-monospace,monospace");
+      b.onclick = fn;
+      return b;
+    }
+
+    ft.appendChild(mkBtn("复制全部", "#00F0FF", function () {
+      var raw = JSON.stringify(all, null, 0);
+      var txt = "=== 长任务记录 ===\n" + (lines.join("\n") || "(空)") + "\n\n=== 原始数据 ===\n" + raw;
+      function done() {
+        var b = ft.children[0];
+        b.textContent = "已复制";
+        setTimeout(function () { b.textContent = "复制全部"; }, 1600);
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else fallback();
+      } catch (e) { fallback(); }
+      function fallback() {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = txt;
+          ta.setAttribute("style", "position:fixed;opacity:0;top:0;left:0");
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          done();
+        } catch (e) {}
+      }
+    }));
+
+    ft.appendChild(mkBtn("清空", "#FF2E93", function () {
+      buf.length = 0;
+      dirty = 1;
+      flush();
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      box.parentNode.removeChild(box);
+    }));
+
+    ft.appendChild(mkBtn("关闭", "#6f6f80", function () {
+      box.parentNode.removeChild(box);
+    }));
+
+    box.appendChild(hd);
+    box.appendChild(pre);
+    box.appendChild(ft);
+    (document.body || document.documentElement).appendChild(box);
+  }
+  window.__DIAG_PANEL__ = panel;
+
+  /* 入口一：网址后加 ?diag=1 */
+  var wantDiag = /[?&]diag=1/.test(location.search);
+  if (wantDiag) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () { setTimeout(panel, 400); });
+    } else { setTimeout(panel, 400); }
+  }
+
+  /* 入口二：1.5 秒内连点 7 下 */
+  var taps = [];
+  document.addEventListener("click", function () {
+    var n = Date.now();
+    taps.push(n);
+    var keep = [];
+    for (var j = 0; j < taps.length; j++) if (n - taps[j] < 1500) keep.push(taps[j]);
+    taps = keep;
+    if (taps.length >= 7) { taps = []; panel(); }
+  }, true);
+})();
+
+  </script>
+
    
   <!-- v26.8.35：结构先立住。主样式表 881KB（gzip 175KB）是异步来的，
        它没到之前一条 .view 规则都不生效 —— 45 个页面会全部竖着堆出来（文档高近四万像素），
