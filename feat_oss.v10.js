@@ -918,8 +918,13 @@ async function ossPruneBackups(force) {
       { name: 'manual', keep: OSS_KEEP_MANUAL, items: list.filter(function (x) { return !isAuto(x.key); }).sort(byLast) }
     ];
     for (const g of groups) {
-      for (let i = g.keep; i < g.items.length; i++) {
-        const okDel = await ossDeleteObject(g.items[i].key);
+      /* auto/zika-latest.json 是「随时可恢复」的那一份，永远留着，
+         它占掉 5 个名额里的 1 个（其余按时间从新到旧留 4 个）。 */
+      const fixed = g.items.filter(function (x) { return /zika-latest\.json$/.test(x.key); });
+      const rest = g.items.filter(function (x) { return !/zika-latest\.json$/.test(x.key); });
+      const keepRest = Math.max(0, g.keep - fixed.length);
+      for (let i = keepRest; i < rest.length; i++) {
+        const okDel = await ossDeleteObject(rest[i].key);
         if (okDel) del[g.name] += 1;
       }
     }
