@@ -1284,6 +1284,15 @@ async function ossApplySnapshot(raw, restoreOss) {
   if (incLayout && typeof uiLayoutImport === 'function') {
     try { uiLayoutImport(incLayout, mode === 'merge' ? 'merge' : 'over'); } catch (e) {}
   }
+  /* 恢复/合并进来的那份 data 里未必带通话背景（老备份没有这一项）；
+     本机「独库」里存着的那张不该被它顺手抹掉，这里补回去。 */
+  try {
+    if (typeof callBgDBRestore === 'function') {
+      await callBgDBRestore();
+      try { if (typeof applyCallBg === 'function') applyCallBg(); } catch (e) {}
+      try { if (typeof renderCallBgUI === 'function') renderCallBgUI(); } catch (e) {}
+    }
+  } catch (e) {}
   return true;
 }
 
