@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.16.css">
+  <link rel="stylesheet" href="dist/app.v28.3.17.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.16.js"></script>
+  <script defer src="dist/app.v28.3.17.js"></script>
   <script defer src="feat_oss.v10.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -670,7 +670,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.16.css','dist/app.v28.3.16.js'];
+      var BOOT_FILES = ['dist/app.v28.3.17.css','dist/app.v28.3.17.js'];
 
 
 
@@ -4743,6 +4743,7 @@
           <button type="button" class="ap-btn" id="clkBgClear">清除</button>
         </div>
       </div>
+      <p class="data-note" id="clkBgState"></p>
       <p class="data-note">这一位单独一张，只铺在<b>全屏通话</b>那一页（头像、名字与接听／挂断键压在图上），收成小框不换。上传后自动垫一层很薄的浅色纱，让名字与按键在照片上也读得清。和桌面壁纸一样随数据一起导出。</p>
     </div>
 
