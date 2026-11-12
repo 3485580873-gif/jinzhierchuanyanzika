@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.34.css">
+  <link rel="stylesheet" href="dist/app.v28.3.35.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.34.js"></script>
+  <script defer src="dist/app.v28.3.35.js"></script>
   <script defer src="feat_oss.v10.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -670,7 +670,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.34.css','dist/app.v28.3.34.js'];
+      var BOOT_FILES = ['dist/app.v28.3.35.css','dist/app.v28.3.35.js'];
 
 
 
@@ -3044,6 +3044,49 @@
               <div class="ap-row"><span>铺满方式</span><div class="contact-chip-row" style="margin:0" id="apBgFit"><button type="button" class="contact-chip" data-v="cover">铺满</button><button type="button" class="contact-chip" data-v="contain">整张</button><button type="button" class="contact-chip" data-v="repeat">平铺</button></div></div>
               <div class="ap-row"><span>铺到</span><div class="contact-chip-row" style="margin:0" id="apBgRange"><button type="button" class="contact-chip" data-v="page">整页</button><button type="button" class="contact-chip" data-v="bars">页 + 输入栏</button><button type="button" class="contact-chip" data-v="msg">只聊天页</button></div></div>
               <p class="data-note">整页＝顶栏和输入栏一起垫这张图，上下连成一片（原来的样子）；页 + 输入栏＝顶栏保持实白；只聊天页＝两条栏都不垫图。</p>
+            </div>
+
+            <div class="ap-sec" id="afSec">
+              <div class="ap-sec-t">头像框 · 全站通用</div>
+              <div class="ap-row"><span>显示头像框</span><div class="contact-chip-row" style="margin:0" id="afOn"><button type="button" class="contact-chip" data-v="on">显示</button><button type="button" class="contact-chip" data-v="off">隐藏</button></div></div>
+              <p class="data-note">给聊天里的小头像套一层装饰框。图片建议用<b>透明 PNG</b>，框能比头像大、能上下左右挪，放大到 200% 也不会被圆形头像裁掉。这一项是<b>全站一份</b>：换会话、换 TA 都不变，跟上面的聊天背景（每位 TA 各存一份）不一样。</p>
+
+              <div class="af-block">
+                <div class="af-block-hd"><span>我的头像框</span><span class="af-state" id="afMeState">未设置</span></div>
+                <div class="af-prev">
+                  <span class="af-prev" id="afPrevMe"></span>
+                  <div class="af-prev-btns">
+                    <button type="button" class="ap-btn pri" id="afMeUpload">上传</button>
+                    <button type="button" class="ap-btn" id="afMeUrl">URL</button>
+                    <button type="button" class="ap-btn" id="afMeRemove">移除</button>
+                  </div>
+                </div>
+                <div class="af-sliders">
+                  <label class="ap-knob"><span>大小</span><input type="range" id="afMeSize" min="50" max="200" step="1" value="100" aria-label="我的头像框大小"><output id="afMeSizeOut">100%</output></label>
+                  <label class="ap-knob"><span>左右</span><input type="range" id="afMeX" min="-50" max="50" step="1" value="0" aria-label="我的头像框左右"><output id="afMeXOut">0px</output></label>
+                  <label class="ap-knob"><span>上下</span><input type="range" id="afMeY" min="-50" max="50" step="1" value="0" aria-label="我的头像框上下"><output id="afMeYOut">0px</output></label>
+                </div>
+                <input type="file" id="afMeFile" accept="image/png,image/webp,image/gif,image/jpeg" hidden>
+              </div>
+
+              <div class="af-block">
+                <div class="af-block-hd"><span>TA 的头像框</span><span class="af-state" id="afTaState">未设置</span></div>
+                <div class="af-prev">
+                  <span class="af-prev" id="afPrevTa"></span>
+                  <div class="af-prev-btns">
+                    <button type="button" class="ap-btn pri" id="afTaUpload">上传</button>
+                    <button type="button" class="ap-btn" id="afTaUrl">URL</button>
+                    <button type="button" class="ap-btn" id="afTaRemove">移除</button>
+                  </div>
+                </div>
+                <div class="af-sliders">
+                  <label class="ap-knob"><span>大小</span><input type="range" id="afTaSize" min="50" max="200" step="1" value="100" aria-label="TA 的头像框大小"><output id="afTaSizeOut">100%</output></label>
+                  <label class="ap-knob"><span>左右</span><input type="range" id="afTaX" min="-50" max="50" step="1" value="0" aria-label="TA 的头像框左右"><output id="afTaXOut">0px</output></label>
+                  <label class="ap-knob"><span>上下</span><input type="range" id="afTaY" min="-50" max="50" step="1" value="0" aria-label="TA 的头像框上下"><output id="afTaYOut">0px</output></label>
+                </div>
+                <input type="file" id="afTaFile" accept="image/png,image/webp,image/gif,image/jpeg" hidden>
+              </div>
+              <p class="data-note af-note">上传的图、URL、三根杆的数值和开关都跟着主存档走：<b>刷新或闪退重进还在</b>；「设置 → 数据 → 导出全部数据」的备份里也带着，导入能带回来；开了云端图库后，图片会一起迁到 OSS，云备份同样包含这一份设置。</p>
             </div>
           </div>
         </div>
