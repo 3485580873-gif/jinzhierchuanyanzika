@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.25.css">
+  <link rel="stylesheet" href="dist/app.v28.3.26.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.25.js"></script>
+  <script defer src="dist/app.v28.3.26.js"></script>
   <script defer src="feat_oss.v10.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -670,7 +670,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.25.css','dist/app.v28.3.25.js'];
+      var BOOT_FILES = ['dist/app.v28.3.26.css','dist/app.v28.3.26.js'];
 
 
 
@@ -2516,11 +2516,11 @@
               <div class="ap-row"><span>刷新页面不打断通话<span style="display:block;font-size:11px;color:var(--muted)">开着＝这一通正在打的时候刷新页面（含误按刷新、浏览器崩了把这一页恢复回来），回来仍停在通话那一面、计时接着走；半小时内回来才算，更久就按「异常结束」记进通话记录。关掉＝刷新即挂断，那一通也照样记进通话记录（结果写「异常结束」）。这一枚对所有 TA 生效</span></span><input type="checkbox" id="callResumeOnReload" style="width:18px;height:18px;flex:none;margin:0;accent-color:var(--ink)"></div>
               <div class="setting-subhead">对方主动来电</div>
               <div class="ap-row"><span>允许联系人主动给我来电<span style="display:block;font-size:11px;color:var(--muted)">关闭后对方不会主动打来，来电时需你接听或拒绝</span></span><input type="checkbox" id="callIncomingEnable" style="width:18px;height:18px;flex:none;margin:0;accent-color:var(--ink)"></div>
-              <div class="field-row"><label>打来而不发消息的几率（%）<input type="text" id="callIncomingProb" min="0" max="100" inputmode="numeric"></label><div></div></div>
+              <div class="field-row"><label>每分钟打来的几率（%）<input type="text" id="callIncomingProb" min="0" max="100" inputmode="numeric"></label><div></div></div>
               <div class="field-row"><label>响铃最快（秒）<input type="text" id="callIncomingRingMin" min="1" max="600" inputmode="numeric"></label><label>响铃最慢（秒）<input type="text" id="callIncomingRingMax" min="1" max="600" inputmode="numeric"></label></div>
-              <div class="field-row"><label>来电间隔最快（分钟）<input type="text" id="callIncomingMin" min="1" max="10080" inputmode="numeric"></label><label>来电间隔最慢（分钟）<input type="text" id="callIncomingMax" min="1" max="10080" inputmode="numeric"></label></div>
+              <div class="field-row"><label>两次来电至少隔（分钟 · 0＝不限）<input type="text" id="callIncomingMin" min="0" max="10080" inputmode="numeric"></label><label>最长多久必来一通（分钟 · 0＝不用）<input type="text" id="callIncomingMax" min="0" max="10080" inputmode="numeric"></label></div>
               <div class="field-row"><label>来电是视频通话的几率（%）<input type="text" id="callIncomingVideoProb" min="0" max="100" inputmode="numeric"></label><div></div></div>
-              <details class="set-adv"><summary>说明（点开看）</summary><p class="data-note">四种概率之和无需等于 100%，会自动按比例分配。</p><p class="data-note"><b>对方多久会打来一次</b>：TA 每隔一段「主动发送间隔」（TA 的字卡设置里那组 1~5 分钟）会醒来一次，醒来时先掷一次上面那枚「打来而不发消息的几率」，中了就打过来、这一拍就不再发消息；没中就照常发/不发。所以两通电话之间至少隔「来电间隔最快」那么多分钟；如果已经超过「来电间隔最慢」还没打来，下一拍直接打，不再掷骰——这两个数就是给来电定的下限和上限。夜里（免打扰时段）不响。</p><p class="data-note">「通话最长」填到多少就打多久，到点由系统替你挂断；想自己挂就把「禁止联系人主动挂断电话」打开，那样这条只是计时上限、不再自动结束。填 1440 ＝ 24 小时，填 10080 ＝ 7 天（再大按 7 天算）。</p><p class="data-note">这份是<b>全局默认</b>：想给某位 TA 单独一份（概率、时长、来电各算各的），去聊天页右上角 → TA 的设置 → 声音 → 通话，打开「单独设置通话」；没单设的 TA 都照这份走。</p></details>
+              <details class="set-adv"><summary>说明（点开看）</summary><p class="data-note">四种概率之和无需等于 100%，会自动按比例分配。</p><p class="data-note"><b>对方多久会打来一次</b>：和 evanlu 是同一套——页面开着的时候，每 60 秒独立掷一次上面那枚「每分钟打来的几率」，出厂 0.76%，平均两个多小时一通，但随时可能来；不看你正在跟谁聊，也不受主动消息静音、单人模式影响。下面那两个间隔填 0 就不参与（出厂就是 0），填了才分别当「两通之间最少隔多久」和「最多多久必来一通」。夜里（免打扰时段）不响。</p><p class="data-note">「通话最长」填到多少就打多久，到点由系统替你挂断；想自己挂就把「禁止联系人主动挂断电话」打开，那样这条只是计时上限、不再自动结束。填 1440 ＝ 24 小时，填 10080 ＝ 7 天（再大按 7 天算）。</p><p class="data-note">这份是<b>全局默认</b>：想给某位 TA 单独一份（概率、时长、来电各算各的），去聊天页右上角 → TA 的设置 → 声音 → 通话，打开「单独设置通话」；没单设的 TA 都照这份走。</p></details>
             </div>
             <div class="call-pane" data-call-pane="voice" hidden>
               <p class="data-note">只作用在语音通话那一面：接通后他先念几句自己的专属语音。视频里 TA 用字卡消息说话，不吃这一份。</p>
@@ -3386,9 +3386,9 @@
               <div class="ap-row"><span>禁止这位联系人主动挂断电话<span style="display:block;font-size:11px;color:var(--muted)">开启后他接通不会自己结束，需你手动挂断</span></span><input type="checkbox" id="mcNoAutoHangup" style="width:18px;height:18px;flex:none;margin:0;accent-color:var(--ink)"></div>
               <div class="setting-subhead">对方主动来电</div>
               <div class="ap-row"><span>允许这位 TA 主动给我来电<span style="display:block;font-size:11px;color:var(--muted)">关闭后他不会主动打来；单独设置后各算各的，没单设的 TA 照全局那份</span></span><input type="checkbox" id="mcIncomingEnable" style="width:18px;height:18px;flex:none;margin:0;accent-color:var(--ink)"></div>
-              <div class="field-row"><label>打来而不发消息的几率（%）<input type="text" id="mcIncomingProb" min="0" max="100" inputmode="numeric"></label><div></div></div>
+              <div class="field-row"><label>每分钟打来的几率（%）<input type="text" id="mcIncomingProb" min="0" max="100" inputmode="numeric"></label><div></div></div>
               <div class="field-row"><label>响铃最快（秒）<input type="text" id="mcIncomingRingMin" min="1" max="600" inputmode="numeric"></label><label>响铃最慢（秒）<input type="text" id="mcIncomingRingMax" min="1" max="600" inputmode="numeric"></label></div>
-              <div class="field-row"><label>来电间隔最快（分钟）<input type="text" id="mcIncomingMin" min="1" max="10080" inputmode="numeric"></label><label>来电间隔最慢（分钟）<input type="text" id="mcIncomingMax" min="1" max="10080" inputmode="numeric"></label></div><div class="field-row"><label>来电是视频通话的几率（%）<input type="text" id="mcIncomingVideoProb" min="0" max="100" inputmode="numeric"></label><div></div></div>
+              <div class="field-row"><label>两次来电至少隔（分钟 · 0＝不限）<input type="text" id="mcIncomingMin" min="0" max="10080" inputmode="numeric"></label><label>最长多久必来一通（分钟 · 0＝不用）<input type="text" id="mcIncomingMax" min="0" max="10080" inputmode="numeric"></label></div><div class="field-row"><label>来电是视频通话的几率（%）<input type="text" id="mcIncomingVideoProb" min="0" max="100" inputmode="numeric"></label><div></div></div>
               <p class="data-note">四种概率之和无需等于 100%，会自动按比例分配。</p>
             </div>
               <div class="setting-subhead">不分 TA · 整页一份</div>
