@@ -15324,10 +15324,10 @@ function renderMessages() {
       if (md !== lastDate) { frag.appendChild(_buildDaySeparator(md)); lastDate = md; }
       frag.appendChild(_buildMessageHTML(m, miniImg, miniMine, miniPartner));
     }
-    list.appendChild(frag);
-      /* v28.3.40 · 只收集本次新增的懒加载图；appendChild 后 frag 会清空，
-         所以先转成静态数组。 */
+      /* v28.3.40 · 只收集本次新增的懒加载图；必须在 appendChild 前，
+         appendChild 会把 frag 内容移走、frag 随即变空。 */
       const _freshImgs = Array.prototype.slice.call(frag.querySelectorAll('img[data-lazy-img="true"]'));
+    list.appendChild(frag);
     _lastMsgCount = end;
      
      
@@ -75288,6 +75288,14 @@ function _lzBindNew(nodes, host) {
     if (!_lazyObserver) _lazyObserver = _makeLazyObserver();
   } catch (e) { return; }
   const gen = String(_lazyObsGen);
+  /* 揭示范围刻意与 _lazyCatchUp() 完全一致：以「消息列表」为基准、
+     上下各放宽 max(240, 列表高度的一半)。早先用 window 视口 +200 会漏掉
+     列表底部那一段（v39 会揭示、v40 不揭示），图片就要等滚动才出现。 */
+  let _box = null, _pad = 240;
+  try {
+    const _list = (host && host.getBoundingClientRect) ? host : document.getElementById('messageList');
+    if (_list) { _box = _list.getBoundingClientRect(); _pad = Math.max(240, (_list.clientHeight || 0) * 0.5); }
+  } catch (e) {}
   const vh = (window.innerHeight || document.documentElement.clientHeight || 800) + 200;
   for (let i = 0; i < nodes.length; i++) {
     const img = nodes[i];
@@ -75296,9 +75304,11 @@ function _lzBindNew(nodes, host) {
       img.dataset.lzObs = gen;
       if (img.getAttribute('src')) continue;
       if (_lazyWarmed.has(img.dataset.src)) { _lzAttach(img, img.dataset.src, false); continue; }
-      /* 已在视口内：直接揭示，不等 IntersectionObserver 下一帧，避免图片晚一拍 */
       const r = img.getBoundingClientRect();
-      if (img.dataset.src && r.top < vh && r.bottom > -200) _lzReveal(img);
+      let _in = false;
+      if (_box && _box.height) _in = !(r.bottom < _box.top - _pad || r.top > _box.bottom + _pad);
+      else _in = (r.top < vh && r.bottom > -200);   /* 兜底：拿不到列表 rect 时退回视口 */
+      if (img.dataset.src && _in) _lzReveal(img);
       else _lazyObserver.observe(img);
     } catch (e) {
       try { _lazyObserver.observe(img); } catch (e2) {}
