@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.38.css">
+  <link rel="stylesheet" href="dist/app.v28.3.39.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.38.js"></script>
+  <script defer src="dist/app.v28.3.39.js"></script>
   <script defer src="feat_oss.v10.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -670,7 +670,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.38.css','dist/app.v28.3.38.js'];
+      var BOOT_FILES = ['dist/app.v28.3.39.css','dist/app.v28.3.39.js'];
 
 
 
@@ -3056,7 +3056,7 @@
                 <div class="af-sliders" style="margin-top:0">
                   <label class="ap-knob"><span>大小</span><input type="range" id="afAvSize" min="24" max="48" step="1" value="40" aria-label="聊天头像尺寸"><output id="afAvSizeOut">40px</output></label>
                 </div>
-                <p class="data-note">参考 evanlu 的「头像尺寸」（24~48px）。拖这一根，聊天里的小头像和两套头像框（含左右／上下偏移）按同一比例同步放大缩小，之前调好的相对位置不会跑偏；上面的预览是按 1.55 倍放大展示的，跟聊天里看到的是同一套比例。这一项也是<b>全站一份</b>，跟头像框一起存进主存档与备份。</p>
+                <p class="data-note">参考 evanlu 的「头像尺寸」（24~48px）。拖这一根，聊天里的小头像和两套头像框（含左右／上下偏移）按同一比例同步放大缩小，之前调好的相对位置不会跑偏；上面的预览就是聊天里那颗头像的等比放大版，框的大小和位置逐像素一致，预览里调准、聊天里就一定对齐。这一项也是<b>全站一份</b>，跟头像框一起存进主存档与备份。</p>
               </div>
 
               <div class="af-block">
