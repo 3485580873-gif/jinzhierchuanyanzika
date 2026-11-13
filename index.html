@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.40.css">
+  <link rel="stylesheet" href="dist/app.v28.3.42.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.40.js"></script>
+  <script defer src="dist/app.v28.3.42.js"></script>
   <script defer src="feat_oss.v10.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -670,7 +670,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.40.css','dist/app.v28.3.40.js'];
+      var BOOT_FILES = ['dist/app.v28.3.42.css','dist/app.v28.3.42.js'];
 
 
 
