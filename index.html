@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.54.css">
+  <link rel="stylesheet" href="dist/app.v28.3.55.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.54.js"></script>
+  <script defer src="dist/app.v28.3.55.js"></script>
   <script defer src="feat_oss.v11.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -504,7 +504,13 @@
       if (!_spSkip) {
         try {
           var _spLast = Number(localStorage.getItem(AGE_GATE_LAST) || 0);
-          if (_spLast && Date.now() - _spLast < 10 * 60 * 1000) { _spSkip = true; window.__spSkipGate = true; }
+          if (_spLast && Date.now() - _spLast < 10 * 60 * 1000) {
+            _spSkip = true;
+            window.__spSkipGate = true;
+            /* v28.3.55 · 这次不是「重新进入」，是「回来」：
+               主包据此（a）恢复上次停留的页面（b）不重弹更新公告与备份提醒 */
+            window.__spSoftBack = true;
+          }
         } catch (e) {}
       }        
       var _spShowGate = !_spSkip;                                              
@@ -527,6 +533,22 @@
         setInterval(_spMarkActive, 120000);
         document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') _spMarkActive(); });
         window.addEventListener('pagehide', _spMarkActive);
+        /* v28.3.55 · 留一份「最近 8 次是怎么进来的」：
+             type=reload   -> 页面上真的有代码在 reload（能顺着查）
+             type=navigate + soft=1 -> 系统把页面回收后又恢复（不是代码刷的）
+           导出诊断信息时能看到这段，下次再遇到「莫名刷新」就有据可查。 */
+        try {
+          var _bl = [];
+          try { _bl = JSON.parse(localStorage.getItem('ordinal-boot-log') || '[]') || []; } catch (e) { _bl = []; }
+          var _navt = 'navigate';
+          try {
+            var _ne = (performance.getEntriesByType && performance.getEntriesByType('navigation')) || [];
+            if (_ne && _ne[0] && _ne[0].type) _navt = _ne[0].type;
+          } catch (e) {}
+          _bl.push({ t: Date.now(), type: _navt, soft: window.__spSoftBack ? 1 : 0, v: window.__spSoftBack ? 1 : 0 });
+          if (_bl.length > 8) _bl = _bl.slice(-8);
+          localStorage.setItem('ordinal-boot-log', JSON.stringify(_bl));
+        } catch (e) {}
       } catch (e) {}
 
        
@@ -690,7 +712,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.54.css','dist/app.v28.3.54.js'];
+      var BOOT_FILES = ['dist/app.v28.3.55.css','dist/app.v28.3.55.js'];
 
 
 
