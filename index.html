@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.53.css">
+  <link rel="stylesheet" href="dist/app.v28.3.54.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.53.js"></script>
+  <script defer src="dist/app.v28.3.54.js"></script>
   <script defer src="feat_oss.v11.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -477,6 +477,8 @@
 
   var AGE_GATE_VER_EARLY = '2026-10-09';
 
+  var AGE_GATE_LAST = 'ordinal-last-active';
+
    
 
    
@@ -495,7 +497,16 @@
        
        
        
-      var _spSkip = localStorage.getItem(AGE_GATE_KEY_EARLY) !== null;        
+      var _spSkip = localStorage.getItem(AGE_GATE_KEY_EARLY) !== null;
+      /* v28.3.54 · 切屏被系统回收后重载，不是「重新进入」而是「回来」：
+         10 分钟内活跃过就直接进主界面，不再用白底公告铺一遍屏。
+         真正冷启动（隔久了）照旧「每次进入前都读一遍」。 */
+      if (!_spSkip) {
+        try {
+          var _spLast = Number(localStorage.getItem(AGE_GATE_LAST) || 0);
+          if (_spLast && Date.now() - _spLast < 10 * 60 * 1000) { _spSkip = true; window.__spSkipGate = true; }
+        } catch (e) {}
+      }        
       var _spShowGate = !_spSkip;                                              
 
        
@@ -508,6 +519,15 @@
         window.__gateEarlyAt = performance.now();
         document.documentElement.classList.add('gate-early');
       }
+
+      /* v28.3.54 · 记「最后活跃时刻」，供下次判断是「回来」还是「进入」 */
+      try {
+        var _spMarkActive = function () { try { localStorage.setItem(AGE_GATE_LAST, String(Date.now())); } catch (e) {} };
+        _spMarkActive();
+        setInterval(_spMarkActive, 120000);
+        document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') _spMarkActive(); });
+        window.addEventListener('pagehide', _spMarkActive);
+      } catch (e) {}
 
        
 
@@ -670,7 +690,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.53.css','dist/app.v28.3.53.js'];
+      var BOOT_FILES = ['dist/app.v28.3.54.css','dist/app.v28.3.54.js'];
 
 
 
@@ -1287,6 +1307,9 @@
 
 
 
+
+  /* v28.3.54 · 外链样式未到时的兜底底色，避免无样式白闪 */
+  html,body{background:#F7F8FA;margin:0}
 
   html.gate-early .app-shell{display:none}
 
