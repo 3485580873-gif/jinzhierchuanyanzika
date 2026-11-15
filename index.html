@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.47.css">
+  <link rel="stylesheet" href="dist/app.v28.3.48.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -440,7 +440,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.47.js"></script>
+  <script defer src="dist/app.v28.3.48.js"></script>
   <script defer src="feat_oss.v11.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -670,7 +670,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.47.css','dist/app.v28.3.47.js'];
+      var BOOT_FILES = ['dist/app.v28.3.48.css','dist/app.v28.3.48.js'];
 
 
 
@@ -2565,6 +2565,7 @@
                
               <div class="mx-actrow"><button type="button" class="soft-btn" id="mxModelPull">拉取可用模型</button><span class="data-note" id="mxModelPullNote"></span></div>
               <div class="contact-chip-row" id="mxModelChips" hidden></div>
+            <div class="check-row"><label class="check-item"><input type="checkbox" id="mxProsody"><span>按标点停顿，念得更自然<span style="display:block;font-size:11px;color:var(--muted)">逗号短停、句号长停、换行分段，并加强中文发音；关掉＝按老办法一口气念完</span></span></label></div>
               <label>语速（0.5~2）<input type="text" id="mxSpeed" min="0.5" max="2" step="0.1" inputmode="decimal"></label>
               <p class="data-note">这四项只在两种时候才要动：<b>手里是旧控制台的 Key</b>（那时才需要 GroupId），或者<b>官方换了地址／模型名</b>。四格全留空＝自动轮询官方地址、用默认模型、语速一倍——绝大多数人一辈子不用打开这里。</p>
             </details>
