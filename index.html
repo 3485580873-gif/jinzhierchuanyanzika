@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.55.css">
+  <link rel="stylesheet" href="dist/app.v28.3.56.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -189,6 +189,10 @@
   var STORE = 'data';
   var MSGS_STORE = 'msgs';
   var GROUPS_KEY = 'groups';
+  /* v28.3.56 · 自定义字体单独一条记录。它是 base64 字符串，常 3~11MB；
+     以前跟着主树一起 put，等于每发一条消息都重写一遍这 8MB。 */
+  var FONT_KEY = '__FONT__';
+  var FONT_REF = 'seg://font';
   var SEG_SIZE = 120;        /* 与 v26 一致：每段 120 条 */
   var SEG_MIN = 400;         /* 与 v26 一致：不足 400 条的会话不分段，一条整份记录 */
   var SEP = '\u0000';
@@ -221,6 +225,8 @@
   var chatSigs = {};
   /* 读侧出过问题时记下原因；非空时一律不写库 */
   var broken = '';
+  /* 字体上次落盘时的指纹：只有它变了才重写 __FONT__ */
+  var fontSig = '';
 
   /* ---------- A. 读合并 ---------- */
 
@@ -303,7 +309,8 @@
         resolve(tree);
       }, MERGE_TIMEOUT);
 
-      Promise.all([idbGetAll(db, MSGS_STORE), idbGet(db, STORE, GROUPS_KEY)])
+      Promise.all([idbGetAll(db, MSGS_STORE), idbGet(db, STORE, GROUPS_KEY),
+                   idbGet(db, STORE, FONT_KEY)])
         .then(function (res) {
           if (settled) return;
           var recs = res[0], grec = res[1];
@@ -327,8 +334,27 @@
             && (!Array.isArray(tree.groups) || !tree.groups.length)) {
             tree.groups = grec.groups;
           }
+          /* v28.3.56 · 字体：主树里是 seg://font 引用（或为空）而独立记录在，就补回去。
+             独立记录也没了 = 字体文件真的丢了 —— 把引用清掉并留个标记，
+             让设置页诚实显示「字体文件丢失」，而不是留着一个空名字装作还在。 */
+          try {
+            var frec = res[2];
+            var fap = tree.appearance || (tree.appearance = {});
+            var fcur = fap.customFontCss;
+            if (frec && typeof frec.css === 'string' && frec.css
+              && (!fcur || fcur === FONT_REF)) {
+              fap.customFontCss = frec.css;
+              if (!fap.customFontName && frec.name) fap.customFontName = frec.name;
+              fontSig = frec.css.length + ':' + frec.css.slice(-48);
+            } else if (fcur === FONT_REF && (!frec || !frec.css)) {
+              fap.customFontCss = '';
+              fap._fontLost = 1;
+              fontSig = '';
+            }
+          } catch (e) {}
           /* 主树若标了「已分表」，把标记摘掉：现在这份是完整的 */
           try { delete tree._split; } catch (e) {}
+          try { delete tree._fontSplit; } catch (e) {}
           try { delete tree._groupsSplit; } catch (e) {}
           /* data.messages 只是「当前会话 msgs」的别名，v22 靠的是引用相等。
            * 重新指一次，免得读到旧引用（空数组）。 */
@@ -353,7 +379,7 @@
 
   /* ---------- B. 写 ---------- */
 
-  /* 剥空的主树：消息和字卡都拿走了，只剩会话骨架 + 设置 */
+  /* 剥空的主树：消息、字卡、字体都拿走了，只剩会话骨架 + 设置 */
   function stubOf(tree) {
     var stub = Object.assign({}, tree);
     var chats = {}, src = tree.chats || {};
@@ -365,6 +391,16 @@
     stub._split = 1;
     try { delete stub.groups; } catch (e) {}
     stub._groupsSplit = 1;
+    /* v28.3.56 · 字体换成引用标记。注意必须新建 appearance 对象，
+       直接改 stub.appearance 会连内存里的 data.appearance 一起改掉。 */
+    try {
+      var ap = tree.appearance;
+      if (ap && typeof ap === 'object'
+        && typeof ap.customFontCss === 'string' && ap.customFontCss) {
+        stub.appearance = Object.assign({}, ap, { customFontCss: FONT_REF });
+        stub._fontSplit = 1;
+      }
+    } catch (e) {}
     return stub;
   }
 
@@ -418,6 +454,26 @@
     if (Array.isArray(tree.groups)) {
       tx.objectStore(STORE).put({ _gs: 1, _savedAt: at, groups: tree.groups }, GROUPS_KEY);
     }
+    /* v28.3.56 · 字体：指纹没变就一个字都不写。发一条消息只该动那一段消息，
+       不该把 8MB 的字体重新搬一次 —— 这是「发着发着整页重来」的主因之一。 */
+    try {
+      var _fap = tree && tree.appearance;
+      var _fcss = (_fap && typeof _fap.customFontCss === 'string') ? _fap.customFontCss : '';
+      var _fsig = _fcss ? (_fcss.length + ':' + _fcss.slice(-48)) : '';
+      if (_fsig !== fontSig) {
+        /* 指纹要等事务真的提交了才前进：中途 abort 时不能假装写成功了，
+           否则下一次就不会重试，字体永远落不了盘。 */
+        tx.addEventListener('complete', function () { fontSig = _fsig; });
+        if (_fcss) {
+          tx.objectStore(STORE).put({
+            _fs: 1, _savedAt: at, sig: _fsig, css: _fcss,
+            name: (_fap.customFontName || '')
+          }, FONT_KEY);
+        } else {
+          tx.objectStore(STORE).delete(FONT_KEY);
+        }
+      }
+    } catch (e) {}
     return tx;
   }
 
@@ -440,7 +496,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.55.js"></script>
+  <script defer src="dist/app.v28.3.56.js"></script>
   <script defer src="feat_oss.v11.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -498,21 +554,12 @@
        
        
       var _spSkip = localStorage.getItem(AGE_GATE_KEY_EARLY) !== null;
-      /* v28.3.54 · 切屏被系统回收后重载，不是「重新进入」而是「回来」：
-         10 分钟内活跃过就直接进主界面，不再用白底公告铺一遍屏。
-         真正冷启动（隔久了）照旧「每次进入前都读一遍」。 */
-      if (!_spSkip) {
-        try {
-          var _spLast = Number(localStorage.getItem(AGE_GATE_LAST) || 0);
-          if (_spLast && Date.now() - _spLast < 10 * 60 * 1000) {
-            _spSkip = true;
-            window.__spSkipGate = true;
-            /* v28.3.55 · 这次不是「重新进入」，是「回来」：
-               主包据此（a）恢复上次停留的页面（b）不重弹更新公告与备份提醒 */
-            window.__spSoftBack = true;
-          }
-        } catch (e) {}
-      }        
+      /* v28.3.56 · 把 v54/v55 的「10 分钟内活跃过就跳过公告」撤掉了。
+         那层公告不只是公告，它同时是加载遮罩：这台机器 DOM 解析要 1.6s，
+         一万多条消息 + 四千多张字卡铺完还要更久。跳过遮罩＝直接把半成品露出来，
+         主界面图层和聊天界面图层一起露在外面，看起来就是「加载出错、图层错乱」。
+         恢复为：每次进入都完整读一遍。回到上次那一页改由主包在 reveal 之后做，
+         不再靠「不铺公告」来实现。 */
       var _spShowGate = !_spSkip;                                              
 
        
@@ -712,7 +759,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.55.css','dist/app.v28.3.55.js'];
+      var BOOT_FILES = ['dist/app.v28.3.56.css','dist/app.v28.3.56.js'];
 
 
 
