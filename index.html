@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.57.css">
+  <link rel="stylesheet" href="dist/app.v28.3.58.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -496,7 +496,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.57.js"></script>
+  <script defer src="dist/app.v28.3.58.js"></script>
   <script defer src="feat_oss.v11.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -777,7 +777,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.57.css','dist/app.v28.3.57.js'];
+      var BOOT_FILES = ['dist/app.v28.3.58.css','dist/app.v28.3.58.js'];
 
 
 
@@ -1475,6 +1475,55 @@
 
   </style>
 
+  <script>
+    /* v28.3.58 · 跟 evanlu 一样的判定钩子 + 空闲自动迁移。
+       判定：OSS 连通 且 数据里已无本地大图(base64) → 告诉备份层可以停写全树镜像。
+       自动迁移：OSS 连通 但还有本地大图 → 空闲时逐批上云，成功后本地那条换成 oss:// 引用。 */
+    (function () {
+      var _countLocal = function () {
+        /* data 是主包闭包变量，window.data 拿不到；走 feat_oss 的 audit（它在同一
+           作用域能读到 data）。拿不到就返回 -1，表示「不确定」，绝不误判成 0 而停写镜像。 */
+        try {
+          if (window.__mine && typeof window.__mine.audit === 'function') {
+            var a = window.__mine.audit();
+            if (a && typeof a.local === 'number') return a.local;
+          }
+        } catch (e) {}
+        return -1;
+      };
+      var _ossReady = function () {
+        try { return !!(window.__mine && typeof window.__mine.ready === 'function' && window.__mine.ready()); } catch (e) { return false; }
+      };
+      window.__ossLikeEvanlu = function () {
+        if (!_ossReady()) return false;      /* OSS 没连通：镜像照旧写，保命 */
+        return _countLocal() === 0;          /* 本地无大图：主库+OSS 双保险，镜像可停 */
+      };
+      var _autoRan = false;
+      var _kick = function () {
+        if (_autoRan) return;
+        if (!_ossReady()) return;
+        if (_countLocal() === 0) { _autoRan = true; return; }
+        _autoRan = true;
+        /* 延迟到空闲再做，避开开屏铺数据那阵；失败不重试本会话，下次进来再试。 */
+        var _run = function () {
+          try {
+            if (!window.__mine || typeof window.__mine.migrate !== 'function') return;
+            var res = window.__mine.migrate(function (done, total, ok, fail) {});
+            if (res && typeof res.then === 'function') {
+              res.then(function (r) {
+                try { if (r && r.ok && typeof flushSave === 'function') flushSave(); } catch (e) {}
+              }).catch(function () {});
+            }
+          } catch (e) {}
+        };
+        if (typeof requestIdleCallback === 'function') requestIdleCallback(_run, { timeout: 6000 });
+        else setTimeout(_run, 4000);
+      };
+      window.addEventListener('load', function () {
+        setTimeout(_kick, 3000);
+      });
+    })();
+</script>
 </head>
 <body>
   <div id="ageGate" aria-hidden="true">

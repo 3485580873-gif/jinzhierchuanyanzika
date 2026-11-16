@@ -2047,6 +2047,9 @@ try {
     renderPanel: function () { return cloudRender(); },
     refreshStatus: function () { return cloudRefreshStatus(); },
     localLooksEmpty: function () { return _ossLocalLooksEmpty(); },
+    /* v28.3.58 · 给备份层判定用：本机还有多少张本地大图 / 云端引用。
+       audit 函数在主包作用域里能直接读到 data，index 钩子通过这里拿，避免 window.data 拿不到。 */
+    audit: function () { try { return _ossAuditImgs(); } catch (e) { return { local: 0, localBytes: 0, cloud: 0 }; } },
     vaultList: function () { return (window.__vaultList ? window.__vaultList() : []); },
     vaultGet: function (k) { return (window.__vaultGet ? window.__vaultGet(k) : null); }
   };
