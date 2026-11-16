@@ -18,7 +18,7 @@
        但要等 onload 回调才生效，而主包 2.9MB 解析时主线程被占住，
        回调排到 70 秒后才跑——前一分多钟整站没有样式（字特别大、排版散开）。
        直接 media="all"，样式一到就应用，不用等 JS。 -->
-  <link rel="stylesheet" href="dist/app.v28.3.56.css">
+  <link rel="stylesheet" href="dist/app.v28.3.57.css">
   <!-- v22.2.1 基线 · 开机前置：库名接管 / 图片地址钩子 / 数据库兼容层
        必须内联且在主包之前 —— 主包 defer，而库名接管要抢在它 open 之前生效。 -->
   <script>
@@ -496,7 +496,7 @@
 })();
 
   </script>
-  <script defer src="dist/app.v28.3.56.js"></script>
+  <script defer src="dist/app.v28.3.57.js"></script>
   <script defer src="feat_oss.v11.js"></script>
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -580,20 +580,38 @@
         setInterval(_spMarkActive, 120000);
         document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') _spMarkActive(); });
         window.addEventListener('pagehide', _spMarkActive);
-        /* v28.3.55 · 留一份「最近 8 次是怎么进来的」：
-             type=reload   -> 页面上真的有代码在 reload（能顺着查）
-             type=navigate + soft=1 -> 系统把页面回收后又恢复（不是代码刷的）
-           导出诊断信息时能看到这段，下次再遇到「莫名刷新」就有据可查。 */
+        /* v28.3.57 · 把「聊着聊着就刷新」钉死：每轮开一个 live 记录，
+           正常离开(pagehide/beforeunload)写一条同 rid 的 exit。
+           下次进来时如果 live 没有配对 exit -> 上一轮是被系统杀/崩溃(killed)，
+           而不是代码主动 reload —— 诊断信息里会原样列出来，不再靠猜。 */
         try {
-          var _bl = [];
-          try { _bl = JSON.parse(localStorage.getItem('ordinal-boot-log') || '[]') || []; } catch (e) { _bl = []; }
-          var _navt = 'navigate';
+          var _now57 = Date.now();
+          var _rid57 = String(_now57) + '-' + Math.floor(Math.random() * 1e6);
+          var _prevLive = null, _prevExit = null;
+          try { _prevLive = JSON.parse(localStorage.getItem('ordinal-run-live') || 'null'); } catch (e) {}
+          try { _prevExit = JSON.parse(localStorage.getItem('ordinal-run-exit') || 'null'); } catch (e) {}
+          var _navt = 'navigate', _how = 'navigate';
           try {
             var _ne = (performance.getEntriesByType && performance.getEntriesByType('navigation')) || [];
             if (_ne && _ne[0] && _ne[0].type) _navt = _ne[0].type;
           } catch (e) {}
-          _bl.push({ t: Date.now(), type: _navt, soft: window.__spSoftBack ? 1 : 0, v: window.__spSoftBack ? 1 : 0 });
-          if (_bl.length > 8) _bl = _bl.slice(-8);
+          var _prevNormal = !!(_prevLive && _prevExit && _prevExit.rid === _prevLive.rid);
+          if (_navt === 'reload') _how = 'reload';
+          else if (_prevLive && !_prevNormal) _how = 'killed';
+          var _prevLiveSec = _prevLive ? Math.round(((_prevExit && _prevExit.rid === _prevLive.rid ? _prevExit.t : _now57) - _prevLive.t0) / 1000) : 0;
+          try {
+            localStorage.setItem('ordinal-run-live', JSON.stringify({ rid: _rid57, t0: _now57, prevHow: _how }));
+            localStorage.removeItem('ordinal-run-exit');
+          } catch (e) {}
+          var _markExit57 = function () {
+            try { localStorage.setItem('ordinal-run-exit', JSON.stringify({ rid: _rid57, t: Date.now() })); } catch (e) {}
+          };
+          window.addEventListener('pagehide', _markExit57);
+          window.addEventListener('beforeunload', _markExit57);
+          var _bl = [];
+          try { _bl = JSON.parse(localStorage.getItem('ordinal-boot-log') || '[]') || []; } catch (e) { _bl = []; }
+          _bl.push({ t: _now57, type: _navt, how: _how, live: _prevLiveSec });
+          if (_bl.length > 10) _bl = _bl.slice(-10);
           localStorage.setItem('ordinal-boot-log', JSON.stringify(_bl));
         } catch (e) {}
       } catch (e) {}
@@ -759,7 +777,7 @@
 
 
 
-      var BOOT_FILES = ['dist/app.v28.3.56.css','dist/app.v28.3.56.js'];
+      var BOOT_FILES = ['dist/app.v28.3.57.css','dist/app.v28.3.57.js'];
 
 
 
