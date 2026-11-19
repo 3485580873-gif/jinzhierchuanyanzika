@@ -308,6 +308,33 @@ function ossSignedGetUrl(cfg, key, ttlSec, w) {
 }
 
 const OSS_SCHEME = 'oss://';
+
+/* v76 · 表情包格子专用「静态首帧」URL。
+ * 阿里云 image/resize 只缩放、GIF 仍是 GIF（会动）；必须加 format,png 才会
+ * 取 GIF 第一帧转成静态 PNG（官方示例 example.gif?x-oss-process=image/format,png）。
+ * 格式转换放缩放之后。私有读走 V4 签名，公共读直接拼参数。带缓存。 */
+var OSS_STILL_PROC = 'image/resize,w_240/format,png';
+function ossStillURL(v) {
+  if (typeof v !== 'string' || v.indexOf(OSS_SCHEME) !== 0) return v;
+  var cfg = null; try { cfg = ossCfgLoad(); } catch (e) { return ''; }
+  if (!cfg || !cfg.bucket) return '';
+  var key = v.slice(OSS_SCHEME.length);
+  var ck = 'still|' + cfg.bucket + '|' + key;
+  var hit = _ossUrlCacheGet(ck); if (hit) return hit;
+  var u = '';
+  if (cfg.sk) {
+    try { u = _ossV4SignedUrl(cfg, 'GET', key, { 'x-oss-process': OSS_STILL_PROC }, '', OSS_URL_TTL); } catch (e) {}
+  }
+  if (!u) {
+    var region = String(cfg.region || '').replace(/^oss-/, '');
+    if (region && cfg.publicRead) {
+      u = 'https://' + cfg.bucket + '.' + region + '.aliyuncs.com/' + key
+        + '?x-oss-process=' + encodeURIComponent(OSS_STILL_PROC);
+    }
+  }
+  if (u) _ossUrlCacheSet(ck, u);
+  return u || '';
+}
 function ossIsRef(v) { return typeof v === 'string' && v.indexOf(OSS_SCHEME) === 0; }
 /* 云端图库没连上时，图片位置显示一张看得懂的占位图。
  * 以前这里返回空串 -> <img src=""> -> 一片白，完全看不出是没配置还是图挂了。 */
